@@ -38,7 +38,8 @@ yarn-error.log*
 /src/generated
 
 # local sqlite database (recreate with: npm run db:push && npm run db:seed)
-/prisma/dev.db
+/prisma/*.db
+/prisma/*.db-journal
 
 # vercel
 .vercel
