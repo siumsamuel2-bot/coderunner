@@ -32,6 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# prisma generated client (regenerate with: npx prisma generate)
+/src/generated
+
+# local sqlite database (recreate with: npm run db:push && npm run db:seed)
+/prisma/dev.db
 
 # vercel
 .vercel
