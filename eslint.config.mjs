@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Self-contained verification harness (own tsconfig + toolchain, see verification/README.md)
+    "verification/**",
   ]),
 ]);
 

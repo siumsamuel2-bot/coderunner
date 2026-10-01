@@ -1,0 +1,27 @@
+{
+  "name": "@coderunner/verification-harness",
+  "version": "1.0.0",
+  "description": "Headless verification harness for Coderunner speedrun submissions. Runs challenge test suites against a live submission URL and emits structured pass/fail evidence for the leaderboard.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "cli": "node src/cli.ts",
+    "list": "node src/cli.ts list",
+    "verify": "node src/cli.ts verify",
+    "make:pdf": "node fixtures/make-pdf.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "playwright": "^1.56.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}
