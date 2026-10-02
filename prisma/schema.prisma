@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
@@ -97,3 +97,4 @@ model Verification {
   verifiedAt DateTime @default(now())
   run        Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
 }
+

@@ -1,8 +1,11 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) });
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error("DATABASE_URL is not set");
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString }),
+});
 
 const challenges = [
   {
@@ -103,6 +106,13 @@ const challenges = [
   },
 ];
 
+const demoRuns = [
+  { email: "demo@coderunner.local", name: "Demo Runner", slug: "calculator", elapsedMs: 45_200 },
+  { email: "demo@coderunner.local", name: "Demo Runner", slug: "landing-page", elapsedMs: 78_500 },
+  { email: "demo@coderunner.local", name: "Demo Runner", slug: "todo-auth", elapsedMs: 132_400 },
+  { email: "demo@coderunner.local", name: "Demo Runner", slug: "chatbot", elapsedMs: 61_800 },
+];
+
 async function main() {
   for (const challenge of challenges) {
     await prisma.challenge.upsert({
@@ -118,6 +128,41 @@ async function main() {
       create: challenge,
     });
   }
+
+  for (const demoRun of demoRuns) {
+    const user = await prisma.user.upsert({
+      where: { email: demoRun.email },
+      update: { name: demoRun.name },
+      create: { email: demoRun.email, name: demoRun.name },
+    });
+    const challenge = await prisma.challenge.findUnique({
+      where: { slug: demoRun.slug },
+      select: { id: true },
+    });
+    if (!challenge) continue;
+    const run = await prisma.run.upsert({
+      where: { id: `demo-${demoRun.slug}` },
+      update: {
+        status: "completed",
+        endedAt: new Date(),
+        elapsedMs: demoRun.elapsedMs,
+      },
+      create: {
+        id: `demo-${demoRun.slug}`,
+        userId: user.id,
+        challengeId: challenge.id,
+        status: "completed",
+        endedAt: new Date(),
+        elapsedMs: demoRun.elapsedMs,
+      },
+    });
+    await prisma.verification.upsert({
+      where: { runId: run.id },
+      update: { status: "passed" },
+      create: { runId: run.id, status: "passed", testOutput: "seeded demo verification" },
+    });
+  }
+
   const count = await prisma.challenge.count();
   console.log(`Seed complete: ${count} challenges`);
 }

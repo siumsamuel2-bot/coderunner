@@ -1,16 +1,15 @@
 import { initTRPC } from "@trpc/server";
+import type { Session } from "next-auth";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 
-export const t = initTRPC.create();
-export const trpc = t;
-
-export type User = {
-  id: string;
-  name: string | null;
-  email: string | null;
+export type Context = {
+  prisma: typeof prisma;
+  session: Session | null;
 };
 
-export const createContext = () => ({
-  prisma: null,
-  user: {} as User,
-  session: null,
-});
+export const t = initTRPC.context<Context>().create();
+
+export async function createContext(): Promise<Context> {
+  return { prisma, session: await auth() };
+}

@@ -1,9 +1,14 @@
-export const GET = async () => {
-  return new Response(
-    JSON.stringify({ message: "tRPC endpoint" }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }
-  );
-};
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import { appRouter } from "@/trpc/router";
+import { createContext } from "@/trpc/trpc";
+
+function handler(req: Request) {
+  return fetchRequestHandler({
+    endpoint: "/api/trpc",
+    req,
+    router: appRouter,
+    createContext,
+  });
+}
+
+export { handler as GET, handler as POST };
