@@ -1,0 +1,24 @@
+name: Uptime
+
+on:
+  schedule:
+    # Hourly ping (free tier friendly)
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check production endpoints
+        run: |
+          set -e
+          BASE="https://coderunner-production-8e30.up.railway.app"
+          for path in "/" "/leaderboard" "/api/trpc/challenges.list"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$BASE$path")
+            echo "$path -> $code"
+            if [ "$code" != "200" ]; then
+              echo "::error::Production check failed: $path returned $code"
+              exit 1
+            fi
+          done
