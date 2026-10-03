@@ -4,7 +4,7 @@ async function main() {
   const tables = await prisma.$queryRawUnsafe<{ name: string }[]>(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
   );
-  console.log("Tables:", tables.map((t) => t.name).join(", "));
+  console.log("Tables:", tables.map((t: { name: string }) => t.name).join(", "));
   const challenges = await prisma.challenge.count();
   console.log(`Prisma client connected. Challenge rows: ${challenges}`);
 }
