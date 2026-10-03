@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
@@ -70,6 +70,7 @@ model Challenge {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   runs               Run[]
+  verificationJobs   VerificationJob[]
 }
 
 model Run {
@@ -87,6 +88,7 @@ model Run {
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   challenge   Challenge     @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   verification Verification?
+  verificationJobs VerificationJob[]
 }
 
 model Verification {
@@ -96,4 +98,19 @@ model Verification {
   testOutput String?
   verifiedAt DateTime @default(now())
   run        Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model VerificationJob {
+  id          String   @id @default(cuid())
+  runId       String   @unique
+  challengeId String
+  targetUrl   String
+  status      String   @default("pending")
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  run         Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
 }

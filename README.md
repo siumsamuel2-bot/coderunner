@@ -1,4 +1,29 @@
+# Coderunner
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Overview
+
+Coderunner is an AI app-building speedrun platform where developers race through identical prompts to build apps. The platform tracks verified completion times and ranks them on a global leaderboard.
+
+## Features Implemented (Phase 2)
+
+- **Chapters Page**: List all available challenges with filtering and search
+- **Challenge Detail Page**: View challenge description and submit solutions
+- **Run Submission API**: API endpoint for submitting solution URLs
+- **Verification Integration**: API endpoint to trigger verification harness
+- **Leaderboard Page**: View top runs for each challenge
+- **User Authentication**: Auth.js integration for user sessions
+- **Dashboard**: Personal dashboard showing user's runs and statistics
+- **Verification Webhook**: Endpoint to receive verification results from harness
+
+## Challenges Available
+
+1. Calculator - Build a working calculator app
+2. Todo app with auth - Build a todo app with user login and CRUD operations
+3. PDF analyzer - Build a tool that extracts text and metadata from PDFs
+4. Landing page that converts - Build a marketing landing page
+5. Chatbot - Build a simple chatbot UI
 
 ## Getting Started
 
@@ -16,21 +41,30 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project uses Prisma with SQLite. To set up the database:
 
-## Learn More
+```bash
+npx prisma migrate dev
+npx prisma db seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+## API Routes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `POST /api/runs` - Submit a new run
+- `GET /api/runs` - Get runs (with optional filtering)
+- `POST /api/verify` - Trigger verification for a run
+- `POST /api/verification-webhook` - Receive verification results from harness
+- `POST /api/auth/[...nextauth]` - Authentication endpoints
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Next Steps
 
-## Deploy on Vercel
+To complete the MVP, the following would need to be implemented:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Background worker process to handle verification harness execution
+2. Solution deployment mechanism (for local development testing)
+3. Enhanced verification result handling
+4. Real-time updates using WebSockets or server-sent events
+5. Improved UI/UX for the verification process
+6. Admin panel for managing challenges and users
