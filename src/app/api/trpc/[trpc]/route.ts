@@ -1,8 +1,15 @@
-import { createNextApiHandler } from '@trpc/server/adapters/next';
-import { appRouter } from '@/src/trpc/appRouter';
-import { prisma } from '@/src/lib/prisma';
+import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 
-export default createNextApiHandler({
-  router: appRouter,
-  createContext: () => ({ prisma }),
-});
+import { appRouter } from '@/trpc/appRouter';
+import { createContext } from '@/trpc/context';
+
+function handler(req: Request) {
+  return fetchRequestHandler({
+    endpoint: '/api/trpc',
+    req,
+    router: appRouter,
+    createContext,
+  });
+}
+
+export { handler as GET, handler as POST };

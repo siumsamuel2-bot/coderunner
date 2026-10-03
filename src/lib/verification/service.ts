@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma';
-import { runVerification } from '@coderunner/verification-harness/src/cli';
+import { runVerification } from '@coderunner/verification-harness/src/cli.ts';
 import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
+
+type HarnessChallengeId = Parameters<typeof runVerification>[0]['challengeId'];
 
 export async function triggerVerification(options: {
   challengeId: string;
@@ -31,7 +33,7 @@ export async function triggerVerification(options: {
   try {
     // Run verification harness using the programmatic API
     const report = await runVerification({
-      challengeId: challengeId,
+      challengeId: challengeId as HarnessChallengeId,
       targetUrl: targetUrl,
       seed: finalSeed,
       outDir: outDir,
@@ -55,7 +57,20 @@ export async function triggerVerification(options: {
 }
 
 // Function to process verification results from the report
-export async function processVerificationResults(runId: string, report: any): Promise<void> {
+export async function processVerificationResults(
+  runId: string,
+  report: {
+    verdict: string;
+    finishedAt: string | Date;
+    durationMs?: number | null;
+    summary?: {
+      passed: number;
+      failed: number;
+      skipped: number;
+      requiredFailed?: number;
+    };
+  }
+): Promise<void> {
   try {
     // Find the run
     const run = await prisma.run.findUnique({
@@ -87,7 +102,7 @@ export async function processVerificationResults(runId: string, report: any): Pr
     let testOutput = '';
     if (report.summary) {
       testOutput = `Verification completed: ${report.summary.passed} passed, ${report.summary.failed} failed, ${report.summary.skipped} skipped`;
-      if (report.summary.requiredFailed > 0) {
+      if ((report.summary.requiredFailed ?? 0) > 0) {
         testOutput += ` (${report.summary.requiredFailed} required checks failed)`;
       }
     } else {

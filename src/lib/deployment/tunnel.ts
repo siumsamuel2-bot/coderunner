@@ -1,8 +1,6 @@
 // Deployment tunnel service for exposing local servers to the internet
 // Currently supports ngrok tunneling
 
-import { ChildProcess } from 'child_process';
-
 export interface TunnelInfo {
   url: string;
   localPort: number;
@@ -63,7 +61,7 @@ export async function isTunnelingAvailable(): Promise<boolean> {
  * Get setup instructions for tunneling software
  */
 export function getSetupInstructions(): string {
-  return 
+  return `
 For local development testing, you can use tunneling services to expose your local development server:
 
 1. ngrok (recommended): https://ngrok.com/
@@ -72,10 +70,9 @@ For local development testing, you can use tunneling services to expose your loc
    - Use the provided https://* URL as your solution URL
 
 2. Cloudflare Tunnel: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/
-3. Localton: https://localtunnel.github.io/
+3. Localtunnel: https://localtunnel.github.io/
 
 These services create a secure tunnel from a public URL to your local development server,
 allowing the verification harness to access your solution for testing.
-;
+`;
 }
-

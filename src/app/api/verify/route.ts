@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     // Extract solution URL from toolLog
-    const solutionUrl = run.toolLog?.solutionUrl;
+    const solutionUrl = (run.toolLog as { solutionUrl?: string } | null)?.solutionUrl;
     if (!solutionUrl) {
       return NextResponse.json(
         { error: 'Solution URL not found for this run' },

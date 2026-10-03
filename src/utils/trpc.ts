@@ -1,35 +1,9 @@
-﻿import { httpBatchLink } from '@trpc/client';
-import { createTRPCNext } from '@trpc/react-query';
-import { type AppRouter } from '@/src/trpc/appRouter';
-
-function getBaseUrl() {
-  if (typeof window !== 'undefined')
-    return '';
-  if (process.env.VERCEL_URL)
-    return https://;
-  return http://localhost:;
-}
+﻿import { appRouter } from '@/trpc/appRouter';
+import { createCallerFactory } from '@/trpc/_trpc';
+import { createContext } from '@/trpc/context';
 
 /**
- * This is the tRPC client used by both server and client
+ * Server-side tRPC caller for use in Server Components and route handlers.
+ * Calls procedures directly against Prisma without an HTTP hop.
  */
-export const trpc = createTRPCNext<AppRouter>({
-  config() {
-    return {
-      links: [
-        httpBatchLink({
-          /**
-           * If you want to use SSR, you need to use the server's full URL
-           * @link https://trpc.io/docs/ssr
-           **/
-          url: ${getBaseUrl()}/api/trpc,
-        }),
-      ],
-      /**
-       * @link https://trpc.io/docs/ssr
-       **/
-      ssr: false,
-    };
-  },
-});
-
+export const serverTrpc = createCallerFactory(appRouter)(createContext());

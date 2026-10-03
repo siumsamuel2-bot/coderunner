@@ -13,7 +13,8 @@ export interface VerificationJobData {
  * Add a verification job to the queue
  */
 export async function addVerificationJob(data: VerificationJobData) {
-  const { challengeId, targetUrl, runId, seed } = data;
+  const { challengeId, targetUrl, runId, seed: _seed } = data;
+  void _seed;
 
   // Create a new verification job record
   const job = await prisma.verificationJob.create({

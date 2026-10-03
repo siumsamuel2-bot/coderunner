@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { trpc } from '@/utils/trpc';
+
+import { serverTrpc } from '@/utils/trpc';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const { data: challenges } = await trpc.challenges.list.query();
+  const challenges = await serverTrpc.challenges.list();
 
   return (
     <div className='min-h-screen bg-zinc-50 dark:bg-black'>
@@ -15,7 +16,7 @@ export default async function Home() {
         <p className='mb-8 text-center text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto'>
           Build apps with AI and race against the clock on verified leaderboards
         </p>
-        
+
         <div className='mb-12'>
           <h2 className='mb-4 text-2xl font-semibold text-center text-gray-900 dark:text-gray-100'>
             Available Challenges
@@ -25,7 +26,7 @@ export default async function Home() {
               {challenges.map((challenge) => (
                 <Link
                   key={challenge.id}
-                  href={/challenges/}
+                  href={`/challenges/${challenge.slug}`}
                   className='bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-300'
                 >
                   <div className='px-6 py-4'>
@@ -45,11 +46,11 @@ export default async function Home() {
             </p>
           )}
         </div>
-        
+
         <div className='flex justify-center space-x-4'>
           <Link
             href='/leaderboard'
-            className='flex h-12 w-full items-center justify-center gap-2 rounded-full border border-solid border-indigo-600 px-5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus-ring-offset-2 focus-ring-indigo-300 md:w-[200px]'
+            className='flex h-12 w-full items-center justify-center gap-2 rounded-full border border-solid border-indigo-600 px-5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 md:w-[200px]'
           >
             View Leaderboard
           </Link>
@@ -58,4 +59,3 @@ export default async function Home() {
     </div>
   );
 }
-

@@ -1,16 +1,9 @@
-﻿import { TRPCError } from '@trpc/server';
-import { prisma } from '../lib/prisma';
+﻿import { initTRPC } from '@trpc/server';
+
 import type { Context } from './context';
 
-export const router = TRPCInit.router;
-export const procedure = TRPCInit.procedure;
+const t = initTRPC.context<Context>().create();
 
-const TRPCInit = TRPC.server().createContext<Context>({
-  async opts() {
-    return {
-      prisma,
-    };
-  }
-});
-
-export type AppRouter = typeof appRouter;
+export const router = t.router;
+export const procedure = t.procedure;
+export const createCallerFactory = t.createCallerFactory;
