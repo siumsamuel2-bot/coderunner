@@ -2,7 +2,7 @@
     "version": "0.1.0",
     "name": "coderunner",
     "scripts": {
-        "start": "prisma db push --skip-generate && next start",
+        "start": "prisma db push && next start",
         "lint": "eslint",
         "db:seed": "prisma db seed",
         "db:push": "prisma db push",
