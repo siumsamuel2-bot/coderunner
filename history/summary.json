@@ -4,19 +4,19 @@
     "url": "https://coderunner-production-8e30.up.railway.app/",
     "icon": "https://icons.duckduckgo.com/ip3/coderunner-production-8e30.up.railway.app.ico",
     "slug": "home",
-    "status": "down",
-    "uptime": "99.71%",
-    "uptimeDay": "99.71%",
-    "uptimeWeek": "99.71%",
-    "uptimeMonth": "99.71%",
-    "uptimeYear": "99.71%",
-    "time": 7593,
-    "timeDay": 7593,
-    "timeWeek": 7593,
-    "timeMonth": 7593,
-    "timeYear": 7593,
+    "status": "up",
+    "uptime": "89.44%",
+    "uptimeDay": "89.44%",
+    "uptimeWeek": "89.44%",
+    "uptimeMonth": "89.44%",
+    "uptimeYear": "89.44%",
+    "time": 5128,
+    "timeDay": 5128,
+    "timeWeek": 5128,
+    "timeMonth": 5128,
+    "timeYear": 5128,
     "dailyMinutesDown": {
-      "2026-10-04": 2
+      "2026-10-04": 72
     }
   },
   {
@@ -24,19 +24,19 @@
     "url": "https://coderunner-production-8e30.up.railway.app/leaderboard",
     "icon": "https://icons.duckduckgo.com/ip3/coderunner-production-8e30.up.railway.app.ico",
     "slug": "leaderboard",
-    "status": "down",
-    "uptime": "99.87%",
-    "uptimeDay": "99.87%",
-    "uptimeWeek": "99.87%",
-    "uptimeMonth": "99.87%",
-    "uptimeYear": "99.87%",
-    "time": 7597,
-    "timeDay": 7597,
-    "timeWeek": 7597,
-    "timeMonth": 7597,
-    "timeYear": 7597,
+    "status": "up",
+    "uptime": "89.58%",
+    "uptimeDay": "89.58%",
+    "uptimeWeek": "89.58%",
+    "uptimeMonth": "89.58%",
+    "uptimeYear": "89.58%",
+    "time": 5097,
+    "timeDay": 5097,
+    "timeWeek": 5097,
+    "timeMonth": 5097,
+    "timeYear": 5097,
     "dailyMinutesDown": {
-      "2026-10-04": 1
+      "2026-10-04": 71
     }
   },
   {
@@ -45,18 +45,18 @@
     "icon": "https://icons.duckduckgo.com/ip3/coderunner-production-8e30.up.railway.app.ico",
     "slug": "login",
     "status": "down",
-    "uptime": "99.99%",
-    "uptimeDay": "99.99%",
-    "uptimeWeek": "99.99%",
-    "uptimeMonth": "99.99%",
-    "uptimeYear": "99.99%",
+    "uptime": "89.65%",
+    "uptimeDay": "89.65%",
+    "uptimeWeek": "89.65%",
+    "uptimeMonth": "89.65%",
+    "uptimeYear": "89.65%",
     "time": 85,
     "timeDay": 85,
     "timeWeek": 85,
     "timeMonth": 85,
     "timeYear": 85,
     "dailyMinutesDown": {
-      "2026-10-04": 0
+      "2026-10-04": 71
     }
   }
 ]
