@@ -1,6 +1,8 @@
 name: Upptime
 
 on:
+  push:
+    branches: [main]
   schedule:
     # Hourly uptime check
     - cron: '23 * * * *'
