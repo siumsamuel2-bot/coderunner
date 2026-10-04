@@ -1,7 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getCaller } from "@/trpc/caller";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Leaderboard",
+  description:
+    "Global speedrun leaderboard — fastest verified AI app-building times across all challenges.",
+};
 
 type LeaderboardEntry = {
   rank: number;
