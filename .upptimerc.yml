@@ -1,0 +1,15 @@
+owner: siumsamuel2-bot
+repo: coderunner
+
+sites:
+  - name: Home
+    url: https://coderunner-production-8e30.up.railway.app/
+  - name: Leaderboard
+    url: https://coderunner-production-8e30.up.railway.app/leaderboard
+  - name: Login
+    url: https://coderunner-production-8e30.up.railway.app/login
+
+userAgent: upptime/uptime-monitor
+
+assignees:
+  - siumsamuel2-bot

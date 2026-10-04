@@ -1,5 +1,7 @@
 # Coderunner
 
+[![Upptime](https://github.com/siumsamuel2-bot/coderunner/actions/workflows/upptime.yml/badge.svg)](https://github.com/siumsamuel2-bot/coderunner/actions/workflows/upptime.yml)
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Overview
