@@ -1,8 +1,15 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 
 import { serverTrpc } from '@/utils/trpc';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Leaderboard',
+  description:
+    'Global speedrun leaderboard - fastest verified AI app-building times across all challenges.',
+};
 
 export default async function LeaderboardPage() {
   const topRuns = await serverTrpc.runs.getLeaderboard();
