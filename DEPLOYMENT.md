@@ -46,11 +46,17 @@ Set in the Railway project dashboard:
 
 ## Monitoring
 
-- `.github/workflows/uptime.yml` pings `/`, `/leaderboard`, and
-  `/api/trpc/challenges.list` on a schedule and fails the run if any
-  endpoint is not 200 (GitHub notifies on failure).
+- **Upptime (GitHub Actions, SPE-91)**: `.github/workflows/uptime.yml` pings
+  `/`, `/leaderboard`, and `/api/trpc/challenges.list` on a schedule and
+  fails the run if any endpoint is not 200 (GitHub notifies on failure).
+- **Board-side**: an UptimeRobot monitor also watches the production URL
+  (configured by the board on 2026-10-04).
+- **Keep-alive**: a 10-minute GitHub Actions ping prevents Railway free-tier
+  cold starts; `src/lib/prisma.ts` additionally retries transient Prisma
+  connection failures (P1001/P1002/ECONNREFUSED).
 
 ## Known limitations
 
 - Railway free tier sleeps idle Postgres; first request after idle can be
-  slow (connection timeouts configured in `src/lib/prisma.ts`).
+  slow (connection retry wrapper in `src/lib/prisma.ts` covers this, and the
+  keep-alive ping minimizes it).
