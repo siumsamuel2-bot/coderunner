@@ -150,7 +150,7 @@ export function SubmitRunForm({
           required
           disabled={isSubmitting}
           className='w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400'
-          placeholder='https://your-solution.vercel.app'
+          placeholder='https://your-deployed-app.example.com'
         />
       </div>
       <button
