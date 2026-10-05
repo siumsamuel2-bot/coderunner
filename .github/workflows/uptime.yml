@@ -12,13 +12,26 @@ jobs:
     steps:
       - name: Check production endpoints
         run: |
-          set -e
+          # Railway origin (authoritative; free plan sleeps without these pings)
           BASE="https://coderunner-production-8e30.up.railway.app"
+          RW_FAIL=0
           for path in "/" "/leaderboard" "/api/trpc/challenges.list"; do
             code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$BASE$path")
-            echo "$path -> $code"
+            echo "railway $path -> $code"
             if [ "$code" != "200" ]; then
               echo "::error::Production check failed: $path returned $code"
-              exit 1
+              RW_FAIL=1
             fi
           done
+          # Custom domain (coderunner.app -> Vercel edge per board config);
+          # probe-only, logged but non-blocking while DNS/edge settles.
+          APP_FAIL=0
+          for path in "/" "/leaderboard"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "https://coderunner.app$path")
+            echo "coderunner.app $path -> $code"
+            if [ "$code" != "200" ]; then
+              echo "::warning::coderunner.app $path returned $code (probe-only)"
+              APP_FAIL=1
+            fi
+          done
+          [ "$RW_FAIL" = "0" ]
