@@ -34,6 +34,9 @@ Set in the Railway project dashboard:
 | `DATABASE_URL` | Postgres connection string (auto-injected by plugin) |
 | `AUTH_SECRET`  | NextAuth session encryption key (`openssl rand -base64 32`) |
 | `AUTH_URL`     | Public app base URL                                  |
+| `NEXT_PUBLIC_SENTRY_DSN` | Optional: enables Sentry errors + APM (free tier) |
+| `SENTRY_ENVIRONMENT` | Optional: Sentry environment tag (defaults to NODE_ENV) |
+| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | Optional (build-time): source-map upload |
 
 ## Build & deploy
 
@@ -54,6 +57,15 @@ Set in the Railway project dashboard:
 - **Keep-alive**: a 10-minute GitHub Actions ping prevents Railway free-tier
   cold starts; `src/lib/prisma.ts` additionally retries transient Prisma
   connection failures (P1001/P1002/ECONNREFUSED).
+- **Sentry (SPE-99)**: error tracking + APM across client, edge, and server
+  (`instrumentation.ts`, `instrumentation-client.ts`, `sentry.*.config.ts`).
+  tRPC errors are captured via middleware (`src/trpc/_trpc.ts`); unhandled
+  React errors via `src/app/global-error.tsx`; source maps upload when
+  `SENTRY_AUTH_TOKEN` is set. All disabled without `NEXT_PUBLIC_SENTRY_DSN`.
+- **Health endpoint**: `GET /api/health` returns 200 with DB latency and
+  stale verification-job count, 503 when the DB is unreachable. Monitored by
+  Upptime ("API Health" in `.upptimerc.yml`).
+- **Alert rules & incident response**: see `RUNBOOK.md`.
 
 ## Known limitations
 
