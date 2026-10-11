@@ -1,7 +1,7 @@
 url: https://coderunner-production-8e30.up.railway.app/api/health
-status: down
-code: 404
-responseTime: 120
-lastUpdated: 2026-10-09T00:26:39.782Z
+status: up
+code: 200
+responseTime: 1154
+lastUpdated: 2026-10-11T14:08:15.026Z
 startTime: 2026-10-09T00:26:27.435Z
 generator: Upptime <https://github.com/upptime/upptime>
