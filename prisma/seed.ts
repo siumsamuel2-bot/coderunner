@@ -11,12 +11,14 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url 
  * `challenges` before any DB writes happen.
  */
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
+const LANGUAGES = ["typescript", "python"] as const;
 
 interface ChallengeSpec {
   slug: string;
   title: string;
   description: string;
   difficulty: (typeof DIFFICULTIES)[number];
+  language: (typeof LANGUAGES)[number];
   estimatedMinutes: number;
   testSpec: Prisma.InputJsonValue;
   acceptanceCriteria: string;
@@ -33,6 +35,11 @@ function validateChallengeSpec(spec: ChallengeSpec): void {
   if (!DIFFICULTIES.includes(spec.difficulty)) {
     throw new Error(
       `Challenge "${label}": difficulty must be one of ${DIFFICULTIES.join(", ")}`
+    );
+  }
+  if (!LANGUAGES.includes(spec.language)) {
+    throw new Error(
+      `Challenge "${label}": language must be one of ${LANGUAGES.join(", ")}`
     );
   }
   if (!Number.isInteger(spec.estimatedMinutes) || spec.estimatedMinutes <= 0) {
@@ -66,6 +73,7 @@ const challenges: ChallengeSpec[] = [
     description:
       "Build a working calculator app with +, -, *, /, clear, and decimal support.",
     difficulty: "easy",
+    language: "typescript",
     estimatedMinutes: 15,
     testSpec: {
       checks: [
@@ -87,6 +95,7 @@ const challenges: ChallengeSpec[] = [
     description:
       "Build a todo app with user login and full create/read/update/delete of todos.",
     difficulty: "medium",
+    language: "typescript",
     estimatedMinutes: 30,
     testSpec: {
       checks: [
@@ -107,6 +116,7 @@ const challenges: ChallengeSpec[] = [
     description:
       "Build a tool that accepts a PDF and extracts text and metadata.",
     difficulty: "hard",
+    language: "typescript",
     estimatedMinutes: 45,
     testSpec: {
       checks: [
@@ -125,6 +135,7 @@ const challenges: ChallengeSpec[] = [
     description:
       "Build a marketing landing page with hero, features, CTA, and pricing section.",
     difficulty: "medium",
+    language: "typescript",
     estimatedMinutes: 25,
     testSpec: {
       checks: [
@@ -144,6 +155,7 @@ const challenges: ChallengeSpec[] = [
     description:
       "Build a simple chatbot UI that responds to user messages.",
     difficulty: "easy",
+    language: "typescript",
     estimatedMinutes: 20,
     testSpec: {
       checks: [
@@ -162,6 +174,7 @@ const challenges: ChallengeSpec[] = [
     description:
       "Build a TypeScript array playground: accept a comma/space separated list of numbers and apply sort (asc/desc), filter (even/odd), map (double), reduce (sum) and dedupe operations, showing the result after each click.",
     difficulty: "medium",
+    language: "typescript",
     estimatedMinutes: 30,
     testSpec: {
       checks: [
@@ -185,6 +198,82 @@ const challenges: ChallengeSpec[] = [
     acceptanceCriteria:
       "All seven operations work on randomized seeded inputs and print correct results in order; empty input does not crash the page (bonus); no console errors.",
   },
+  {
+    slug: "py-string-lab",
+    title: "Python String Lab",
+    description:
+      "Build a Python-backed string lab: accept a line of text and apply reverse, uppercase, lowercase, word count and palindrome checks, showing the result after each click.",
+    difficulty: "easy",
+    language: "python",
+    estimatedMinutes: 20,
+    testSpec: {
+      checks: [
+        { id: "str-page-loads", type: "http", expected: "status < 400" },
+        { id: "str-input-present", type: "dom", target: "text input" },
+        {
+          id: "str-controls-present",
+          type: "dom",
+          targets: ["reverse", "uppercase", "lowercase", "word count", "palindrome"],
+        },
+        { id: "str-reverse", type: "interaction", op: "reverse", expected: "reversed string" },
+        { id: "str-uppercase", type: "interaction", op: "uppercase", expected: "ALL CAPS" },
+        { id: "str-lowercase", type: "interaction", op: "lowercase", expected: "all lowercase" },
+        { id: "str-word-count", type: "interaction", op: "word count", expected: "correct count" },
+        { id: "str-palindrome", type: "interaction", op: "palindrome", expected: "positive verdict" },
+        { id: "str-no-console-errors", type: "console", expected: "zero console errors" },
+      ],
+    },
+    acceptanceCriteria:
+      "All five string operations work on randomized seeded inputs and print correct results; empty input does not crash the page (bonus); no console errors.",
+  },
+  {
+    slug: "py-json-forge",
+    title: "Python JSON Forge",
+    description:
+      "Build a Python-backed JSON workbench: paste JSON, then prettify, minify, or sort object keys; invalid JSON must produce a friendly error.",
+    difficulty: "medium",
+    language: "python",
+    estimatedMinutes: 30,
+    testSpec: {
+      checks: [
+        { id: "json-page-loads", type: "http", expected: "status < 400" },
+        { id: "json-input-present", type: "dom", target: "JSON textarea" },
+        {
+          id: "json-controls-present",
+          type: "dom",
+          targets: ["prettify", "minify", "sort keys"],
+        },
+        { id: "json-prettify", type: "interaction", op: "prettify", expected: "indented output" },
+        { id: "json-minify", type: "interaction", op: "minify", expected: "compact output" },
+        { id: "json-sort-keys", type: "interaction", op: "sort keys", expected: "keys alphabetical" },
+        { id: "json-invalid-input", type: "edge", input: "not json", expected: "friendly error" },
+        { id: "json-no-console-errors", type: "console", expected: "zero console errors" },
+      ],
+    },
+    acceptanceCriteria:
+      "Prettify indents, minify compacts, sort keys orders object keys alphabetically; invalid JSON shows a friendly error; no console errors.",
+  },
+  {
+    slug: "py-link-shortener",
+    title: "Python Link Shortener",
+    description:
+      "Build a Python-backed link shortener: submit a long URL, get a short link, and make the short link redirect to the original. Created links persist in a visible list.",
+    difficulty: "hard",
+    language: "python",
+    estimatedMinutes: 45,
+    testSpec: {
+      checks: [
+        { id: "url-page-loads", type: "http", expected: "status < 400" },
+        { id: "url-form-present", type: "dom", target: "URL input + submit" },
+        { id: "url-shorten-appears", type: "interaction", op: "shorten", expected: "short link visible" },
+        { id: "url-redirect-works", type: "http", expected: "3xx redirect to original URL" },
+        { id: "url-second-link-persists", type: "interaction", op: "shorten second", expected: "both links listed" },
+        { id: "url-no-console-errors", type: "console", expected: "zero console errors" },
+      ],
+    },
+    acceptanceCriteria:
+      "Shortening produces a working short link that HTTP-redirects (3xx) to the original URL; multiple links persist and stay listed; no console errors.",
+  },
 ];
 
 async function main() {
@@ -196,6 +285,7 @@ async function main() {
         title: challenge.title,
         description: challenge.description,
         difficulty: challenge.difficulty,
+        language: challenge.language,
         estimatedMinutes: challenge.estimatedMinutes,
         testSpec: challenge.testSpec,
         acceptanceCriteria: challenge.acceptanceCriteria,

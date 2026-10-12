@@ -54,6 +54,12 @@ export default async function Home() {
           >
             View Leaderboard
           </Link>
+          <Link
+            href='/feedback'
+            className='flex h-12 w-full items-center justify-center gap-2 rounded-full border border-solid border-gray-400 px-5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 md:w-[200px]'
+          >
+            Give Feedback
+          </Link>
         </div>
       </div>
     </div>

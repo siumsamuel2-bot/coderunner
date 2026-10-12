@@ -155,6 +155,45 @@ describe.skipIf(!hasBrowser).sequential('e2e: harness vs reference app', () => {
     expect(report.summary.requiredFailed).toBe(2);
   });
 
+  it('py-string-lab: PASS on the reference app', async () => {
+    const report = await runVerification({
+      challengeId: 'py-string-lab',
+      targetUrl: `${app.url}/string-lab`,
+      seed: 20261012,
+      outDir,
+      headless: true
+    });
+    assertReportShape(report, 20261012);
+    expect(report.verdict).toBe('pass');
+    expect(required(report).every((c) => c.status === 'pass')).toBe(true);
+  });
+
+  it('py-json-forge: PASS on the reference app', async () => {
+    const report = await runVerification({
+      challengeId: 'py-json-forge',
+      targetUrl: `${app.url}/json-forge`,
+      seed: 20261013,
+      outDir,
+      headless: true
+    });
+    assertReportShape(report, 20261013);
+    expect(report.verdict).toBe('pass');
+    expect(required(report).every((c) => c.status === 'pass')).toBe(true);
+  });
+
+  it('py-link-shortener: PASS on the reference app (create + redirect + persist)', async () => {
+    const report = await runVerification({
+      challengeId: 'py-link-shortener',
+      targetUrl: `${app.url}/link-shortener`,
+      seed: 20261014,
+      outDir,
+      headless: true
+    });
+    assertReportShape(report, 20261014);
+    expect(report.verdict).toBe('pass');
+    expect(required(report).every((c) => c.status === 'pass')).toBe(true);
+  });
+
   it('reproduces the exact same result when re-run with the same seed', async () => {
     const run = () =>
       runVerification({

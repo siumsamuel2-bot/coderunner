@@ -64,6 +64,7 @@ model Challenge {
   title              String
   description        String
   difficulty         String
+  language           String   @default("typescript")
   estimatedMinutes   Int
   testSpec           Json
   acceptanceCriteria String
@@ -98,6 +99,16 @@ model Verification {
   testOutput String?
   verifiedAt DateTime @default(now())
   run        Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  category  String   @default("general")
+  message   String
+  email     String?
+  page      String?
+  status    String   @default("new")
+  createdAt DateTime @default(now())
 }
 
 model VerificationJob {

@@ -77,4 +77,7 @@ export type ChallengeId =
   | 'pdf-analyzer'
   | 'landing-page'
   | 'chatbot'
-  | 'array-mastery';
+  | 'array-mastery'
+  | 'py-string-lab'
+  | 'py-json-forge'
+  | 'py-link-shortener';
