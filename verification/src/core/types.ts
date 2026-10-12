@@ -76,4 +76,5 @@ export type ChallengeId =
   | 'todo-auth'
   | 'pdf-analyzer'
   | 'landing-page'
-  | 'chatbot';
+  | 'chatbot'
+  | 'array-mastery';
