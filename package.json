@@ -2,7 +2,7 @@
     "version": "0.1.0",
     "name": "coderunner",
     "scripts": {
-        "start": "prisma db push && prisma db seed && next start",
+        "start": "node scripts/start.mjs",
         "lint": "eslint",
         "db:seed": "prisma db seed",
         "db:push": "prisma db push",
