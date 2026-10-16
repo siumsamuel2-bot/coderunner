@@ -1,14 +1,14 @@
 ﻿
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const runId = searchParams.get('runId');
+  const runId = searchParams.get("runId");
 
   if (!runId) {
     return NextResponse.json(
-      { error: 'runId query parameter is required' },
+      { error: "runId query parameter is required" },
       { status: 400 }
     );
   }
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
   if (!run) {
     return NextResponse.json(
-      { error: 'Run not found' },
+      { error: "Run not found" },
       { status: 404 }
     );
   }
@@ -57,6 +57,15 @@ export async function GET(request: Request) {
               currentRun.status !== lastStatus ||
               currentRun.updatedAt > lastUpdatedAt
             ) {
+              // Re-fetch verification record to surface latest failure reason
+              const currentVerification = await prisma.verification.findUnique({
+                where: { runId },
+                select: {
+                  status: true,
+                  testOutput: true,
+                },
+              });
+
               // Send update
               controller.enqueue(
                 'data: ' + JSON.stringify({
@@ -67,6 +76,13 @@ export async function GET(request: Request) {
                     elapsedMs: currentRun.elapsedMs,
                     endedAt: currentRun.endedAt,
                     updatedAt: currentRun.updatedAt,
+                    // Surface failure reason from the verification record
+                    failureReason:
+                      currentRun.status === "failed"
+                        ? currentVerification?.testOutput ?? null
+                        : null,
+                    verificationStatus:
+                      currentVerification?.status ?? null,
                   }
                 }) + '\n\n'
               );
@@ -97,4 +113,3 @@ export async function GET(request: Request) {
     },
   });
 }
-

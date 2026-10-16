@@ -8,7 +8,6 @@ export const runsRouter = router({
       z.object({
         userId: z.string(),
         challengeId: z.string(),
-        elapsedMs: z.number().optional(),
         promptChain: z.unknown().optional(),
         toolLog: z.unknown().optional(),
       })
@@ -18,7 +17,6 @@ export const runsRouter = router({
         data: {
           userId: input.userId,
           challengeId: input.challengeId,
-          elapsedMs: input.elapsedMs ?? null,
           promptChain: input.promptChain as object | undefined,
           toolLog: input.toolLog as object | undefined,
         },

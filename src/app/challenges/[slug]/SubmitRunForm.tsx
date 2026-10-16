@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { useVerificationUpdates } from '@/lib/verification/sse-hook';
 
@@ -11,6 +12,7 @@ export function SubmitRunForm({
   challengeId: string;
   userId: string | null;
 }) {
+  const router = useRouter();
   const [submittedUrl, setSubmittedUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -29,31 +31,44 @@ export function SubmitRunForm({
 
     try {
       if (!userId) {
-        window.location.href = '/auth/signin';
+        router.push('/auth/signin');
         return;
       }
 
-      const response = await fetch('/api/runs', {
+      // Step 1: server-side run start — records startedAt, enforces one
+      // active run per user per challenge (SPE-119).
+      const startResponse = await fetch('/api/runs/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, challengeId, solutionUrl: submittedUrl }),
+        body: JSON.stringify({ challengeId }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit run');
+      if (startResponse.status === 409) {
+        const conflict = await startResponse.json();
+        setSubmitError(
+          `You already have an active run for this challenge (${conflict.status}).`
+        );
+        setIsSubmitting(false);
+        return;
       }
 
-      const runData = await response.json();
-      setRunId(runData.id);
+      if (!startResponse.ok) {
+        throw new Error('Failed to start run');
+      }
 
-      const verifyResponse = await fetch('/api/verify', {
+      const startedRun = await startResponse.json();
+      setRunId(startedRun.id);
+
+      // Step 2: server-side submit — computes elapsedMs from DB timestamps,
+      // transitions to `submitted`, queues verification.
+      const submitResponse = await fetch('/api/runs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runId: runData.id }),
+        body: JSON.stringify({ runId: startedRun.id, solutionUrl: submittedUrl }),
       });
 
-      if (!verifyResponse.ok) {
-        throw new Error('Failed to start verification');
+      if (!submitResponse.ok) {
+        throw new Error('Failed to submit run');
       }
 
       setSubmitSuccess(true);
@@ -112,7 +127,9 @@ export function SubmitRunForm({
                   </span>
                 )}
                 {runStatus.status === 'failed' && (
-                  <span className='text-xs text-red-600 dark:text-red-400'>Failed</span>
+                  <span className='text-xs text-red-600 dark:text-red-400'>
+                    Failed{runStatus.failureReason ? `: ${runStatus.failureReason}` : ''}
+                  </span>
                 )}
                 {runStatus.status === 'verifying' && (
                   <span className='text-xs text-yellow-600 dark:text-yellow-400'>

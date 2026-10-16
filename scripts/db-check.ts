@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
 
 async function main() {
-  const tables = await prisma.$queryRawUnsafe<{ name: string }[]>(
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+  const tables = await prisma.$queryRawUnsafe<{ tablename: string }[]>(
+    "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename"
   );
-  console.log("Tables:", tables.map((t: { name: string }) => t.name).join(", "));
+  console.log("Tables:", tables.map((t: { tablename: string }) => t.tablename).join(", "));
   const challenges = await prisma.challenge.count();
   console.log(`Prisma client connected. Challenge rows: ${challenges}`);
 }
