@@ -2,9 +2,24 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { addVerificationJob } from '@/lib/verification/queue';
+import { auth } from '@clerk/nextjs/server';
 
 export async function POST(request: Request) {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const { runId } = await request.json();
 
     if (!runId) {
@@ -27,6 +42,17 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Run not found' },
         { status: 404 }
+      );
+    }
+
+    if (run.userId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    if (run.status !== 'submitted') {
+      return NextResponse.json(
+        { error: 'Run is not awaiting verification' },
+        { status: 409 }
       );
     }
 

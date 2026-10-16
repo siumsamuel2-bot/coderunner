@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,29 +14,28 @@ const geistMono = Geist_Mono({
 });
 
 const siteUrl =
-  process.env.AUTH_URL ??
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  "https://coderunner-production-8e30.up.railway.app";
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "https://coderunner.dev";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Coderunner",
-    template: "%s - Coderunner",
+    default: "CodeRunner",
+    template: "%s - CodeRunner",
   },
   description:
     "Race the clock. Build software with AI. Same prompts, same rules - verified completion times on a global leaderboard.",
   openGraph: {
     type: "website",
     url: siteUrl,
-    siteName: "Coderunner",
-    title: "Coderunner",
+    siteName: "CodeRunner",
+    title: "CodeRunner",
     description:
       "Race the clock. Build software with AI. Verified completion times on a global leaderboard.",
   },
   twitter: {
     card: "summary",
-    title: "Coderunner",
+    title: "CodeRunner",
     description:
       "Race the clock. Build software with AI. Verified completion times on a global leaderboard.",
   },
@@ -43,11 +43,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="en"
+        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      >
+        <body className="min-h-full flex flex-col">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -1,9 +1,9 @@
-﻿import { z } from 'zod';
+﻿import { z } from "zod";
 
-import { router, procedure } from '../_trpc';
+import { router, protectedProcedure } from "../_trpc";
 
 export const verificationsRouter = router({
-  create: procedure
+  create: protectedProcedure
     .input(
       z.object({
         runId: z.string(),
@@ -20,7 +20,7 @@ export const verificationsRouter = router({
         },
       });
     }),
-  getStatus: procedure
+  getStatus: protectedProcedure
     .input(z.object({ runId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.prisma.verification.findUnique({

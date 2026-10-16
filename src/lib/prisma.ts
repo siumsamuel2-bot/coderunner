@@ -3,12 +3,18 @@ import { PrismaClient } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Errors worth retrying: transient connection failures from the Railway
-// free-tier Postgres sleeping on idle (P1001/P1002 = can't reach/timed out,
-// ECONNREFUSED/ECONNRESET/ETIMEDOUT = socket-level failures from dropped
-// idle connections in the pool).
+// Errors worth retrying: transient connection failures from serverless
+// Postgres (Neon pooler, Railway free-tier sleeping on idle).
+// P1001/P1002 = can't reach/timed out, P1017 = server closed connection,
+// ECONNREFUSED/ECONNRESET/ETIMEDOUT = socket-level failures.
 const RETRYABLE_CODES = new Set(["P1001", "P1002", "P1017"]);
-const RETRYABLE_MESSAGES = ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "Connection terminated"];
+const RETRYABLE_MESSAGES = [
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "Connection terminated",
+  "server closed the connection unexpectedly",
+];
 const MAX_ATTEMPTS = 5;
 
 function isRetryable(err: unknown): boolean {
@@ -39,10 +45,14 @@ function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 function createPrismaClient(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-  // Railway free tier sleeps the Postgres service on idle; waking it can take
-  // 30-90s. Allow long connect/pool timeouts so the first request after an idle
-  // period waits for Postgres to wake instead of 500ing (SPE-86 crash loop).
+  const connectionString =
+    process.env.DATABASE_URL ?? "file:./prisma/dev.db";
+
+  // Neon pooler settings:
+  // - connectionTimeoutMillis: 120s (Neon cold start can take time)
+  // - idleTimeoutMillis: 60s (Neon pooler default)
+  // - max: 3 (conservative for serverless pooler)
+  // - keepAlive: true (maintain connections)
   const adapter = new PrismaPg({
     connectionString,
     connectionTimeoutMillis: 120_000,
@@ -51,7 +61,8 @@ function createPrismaClient(): PrismaClient {
     keepAlive: true,
   });
   const client = new PrismaClient({ adapter });
-  // Retry transient connection errors so a sleeping/waking Postgres yields a
+
+  // Retry transient connection errors so a cold-starting pooler yields a
   // slow response instead of a 500.
   return client.$extends({
     query: {
