@@ -1,12 +1,13 @@
-import { PrismaPg } from "@prisma/adapter-pg";
+
+import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@/generated/prisma/client";
+import { neon } from "@neondatabase/serverless";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Errors worth retrying: transient connection failures from the Railway
-// free-tier Postgres sleeping on idle (P1001/P1002 = can't reach/timed out,
-// ECONNREFUSED/ECONNRESET/ETIMEDOUT = socket-level failures from dropped
-// idle connections in the pool).
+// Errors worth retrying: transient connection failures from Neon (P1001/P1002 =
+// can't reach/timed out, ECONNREFUSED/ECONNRESET/ETIMEDOUT = socket-level
+// failures from dropped idle connections in the pool).
 const RETRYABLE_CODES = new Set(["P1001", "P1002", "P1017"]);
 const RETRYABLE_MESSAGES = ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "Connection terminated"];
 const MAX_ATTEMPTS = 5;
@@ -40,19 +41,13 @@ function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-  // Railway free tier sleeps the Postgres service on idle; waking it can take
-  // 30-90s. Allow long connect/pool timeouts so the first request after an idle
-  // period waits for Postgres to wake instead of 500ing (SPE-86 crash loop).
-  const adapter = new PrismaPg({
-    connectionString,
-    connectionTimeoutMillis: 120_000,
-    idleTimeoutMillis: 60_000,
-    max: 3,
-    keepAlive: true,
-  });
+  // Neon uses the HTTP driver (@prisma/adapter-neon + @neondatabase/serverless)
+  // which works on Cloudflare Pages edge runtime (no Node TCP needed).
+  const sql = neon(connectionString);
+  const adapter = new PrismaNeon(sql);
   const client = new PrismaClient({ adapter });
-  // Retry transient connection errors so a sleeping/waking Postgres yields a
-  // slow response instead of a 500.
+  // Retry transient connection errors so a sleeping/waking Neon yields a slow
+  // response instead of a 500.
   return client.$extends({
     query: {
       $allModels: {

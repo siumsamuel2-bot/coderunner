@@ -1,28 +1,38 @@
 ﻿
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/auth';
 
 export async function GET(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
-  const runId = searchParams.get('runId');
+  const runId = searchParams.get("runId");
 
   if (!runId) {
     return NextResponse.json(
-      { error: 'runId query parameter is required' },
+      { error: "runId query parameter is required" },
       { status: 400 }
     );
   }
 
-  // Verify the run exists
+  // Verify the run exists and belongs to the user
   const run = await prisma.run.findUnique({
     where: { id: runId },
   });
 
   if (!run) {
     return NextResponse.json(
-      { error: 'Run not found' },
+      { error: "Run not found" },
       { status: 404 }
     );
+  }
+
+  if (run.userId !== session.user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   // Create a readable stream for SSE
@@ -97,4 +107,3 @@ export async function GET(request: Request) {
     },
   });
 }
-
