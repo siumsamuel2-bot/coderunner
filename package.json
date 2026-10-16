@@ -7,11 +7,14 @@
         "db:seed": "prisma db seed",
         "db:push": "prisma db push",
         "build": "prisma generate && next build",
+        "build:cloudflare": "prisma generate && next build && npx @cloudflare/next-on-pages",
         "db:check": "tsx scripts/db-check.ts",
         "verification-worker": "tsx scripts/verification-worker.ts",
-        "dev": "next dev"
+        "dev": "next dev",
+        "preview": "npx wrangler pages dev .vercel/output/static"
     },
     "devDependencies": {
+        "@cloudflare/next-on-pages": "^1.13.0",
         "@tailwindcss/postcss": "^4",
         "@types/node": "^20",
         "@types/react": "^19",
@@ -21,9 +24,13 @@
         "prisma": "^7.10.0",
         "tailwindcss": "^4",
         "tsx": "^4.23.15",
-        "typescript": "^5"
+        "typescript": "^5",
+        "wrangler": "^3.80.0"
     },
     "dependencies": {
+        "@aws-sdk/client-s3": "^3.658.0",
+        "@aws-sdk/s3-request-presigner": "^3.1152.0",
+        "@clerk/nextjs": "^6.0.0",
         "@coderunner/verification-harness": "file:./verification",
         "@prisma/adapter-pg": "^7.10.0",
         "@prisma/client": "^7.10.0",
@@ -32,10 +39,11 @@
         "@types/pg": "^8.23.1",
         "dotenv": "^18.0.4",
         "next": "16.3.6",
-        "next-auth": "^5.0.0-beta.30",
         "pg": "^8.23.1",
         "react": "19.2.8",
         "react-dom": "19.2.8",
+        "resend": "^4.0.0",
+        "svix": "^2.8.0",
         "zod": "^4.6.5"
     },
     "private": true

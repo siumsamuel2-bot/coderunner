@@ -2,20 +2,30 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
-import { auth, signOut } from '@/auth';
+import { auth } from '@/auth';
+import { SignOutButton } from '@clerk/nextjs';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const session = await auth();
+  const { userId } = await auth();
 
-  if (!session?.user?.id) {
-    redirect('/auth/signin');
+  if (!userId) {
+    redirect('/sign-in');
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+    select: { id: true, name: true, email: true, image: true },
+  });
+
+  if (!user) {
+    redirect('/sign-in');
   }
 
   const userRuns = await prisma.run.findMany({
     where: {
-      userId: session.user.id,
+      userId: user.id,
     },
     include: {
       challenge: {
@@ -47,39 +57,27 @@ export default async function DashboardPage() {
             Dashboard
           </h1>
           <div className='flex items-center space-x-4'>
-            {session.user.image ? (
+            {user.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={session.user.image}
-                alt={`${session.user.name ?? 'user'}'s avatar`}
+                src={user.image}
+                alt={`${user.name ?? 'user'}'s avatar`}
                 className='h-10 w-10 rounded-full'
               />
             ) : (
               <div className='h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center'>
-                {session.user.name?.[0]?.toUpperCase()}
+                {user.name?.[0]?.toUpperCase()}
               </div>
             )}
             <div className='space-y-2'>
               <p className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                {session.user.name}
+                {user.name}
               </p>
               <p className='text-xs text-gray-500 dark:text-gray-400'>
-                {session.user.email}
+                {user.email}
               </p>
             </div>
-            <form
-              action={async () => {
-                'use server';
-                await signOut({ redirectTo: '/' });
-              }}
-            >
-              <button
-                type='submit'
-                className='px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg'
-              >
-                Sign Out
-              </button>
-            </form>
+            <SignOutButton />
           </div>
         </div>
 
@@ -129,9 +127,12 @@ export default async function DashboardPage() {
                           {run.challenge.title.slice(0, 1).toUpperCase()}
                         </div>
                         <div>
-                          <p className='mb-1 text-sm font-medium text-gray-900 dark:text-gray-100'>
+                          <Link
+                            href={`/challenges/${run.challenge.slug}/results/${run.id}`}
+                            className='text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline'
+                          >
                             {run.challenge.title}
-                          </p>
+                          </Link>
                           <p className='text-xs text-gray-500 dark:text-gray-400'>
                             Submitted {new Date(run.createdAt).toLocaleDateString()}
                           </p>

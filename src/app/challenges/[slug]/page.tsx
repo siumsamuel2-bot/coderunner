@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 
+
 import { SubmitRunForm } from './SubmitRunForm';
 
 export const dynamic = 'force-dynamic';
@@ -23,7 +24,7 @@ export default async function ChallengeDetailPage({
     notFound();
   }
 
-  const session = await auth();
+  const { userId } = await auth();
 
   return (
     <div className='min-h-screen bg-zinc-50 dark:bg-black py-12'>
@@ -77,7 +78,7 @@ export default async function ChallengeDetailPage({
 
         <SubmitRunForm
           challengeId={challenge.id}
-          userId={session?.user?.id ?? null}
+          userId={userId ?? null}
         />
       </div>
     </div>

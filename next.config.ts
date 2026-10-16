@@ -5,10 +5,13 @@ import { fileURLToPath } from "node:url";
 
 const projectDir = dirname(fileURLToPath(import.meta.url));
 
+const isCloudflare = process.env.CLOUDFLARE_PAGES === "1";
+
 const nextConfig: NextConfig = {
   async redirects() {
     return [
-      { source: "/login", destination: "/auth/signin", permanent: true },
+      { source: "/login", destination: "/sign-in", permanent: true },
+      { source: "/auth/signin", destination: "/sign-in", permanent: true },
     ];
   },
   // The verification harness lives in the sibling ../verification package
@@ -16,11 +19,18 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: resolve(projectDir, ".."),
   },
+  // Cloudflare Pages requires output: 'standalone' for edge deployment
+  output: isCloudflare ? "standalone" : undefined,
+  // Disable image optimization for Cloudflare Pages (use Cloudflare Images or external)
+  images: {
+    unoptimized: isCloudflare,
+  },
   serverExternalPackages: [
     "better-sqlite3",
     "@prisma/adapter-better-sqlite3",
     "@coderunner/verification-harness",
     "playwright",
+    "@aws-sdk/client-s3",
   ],
 };
 
