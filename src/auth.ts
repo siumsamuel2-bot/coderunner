@@ -1,52 +1,55 @@
-﻿import NextAuth from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
+﻿import { auth as clerkAuth, currentUser } from '@clerk/nextjs/server';
 
 import { prisma } from '@/lib/prisma';
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [
-    // Dev-friendly email sign-in: enter an email, a user row is upserted.
-    Credentials({
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-      },
-      async authorize(credentials) {
-        const email = (credentials?.email as string | undefined)?.toLowerCase().trim();
-        if (!email) return null;
+// Clerk-backed auth shim (SPE-123 migration from NextAuth). Keeps the
+// NextAuth-shaped `auth()` API so all call sites (`session.user.id`, email,
+// name, image) work unchanged. The Prisma User row is synced from Clerk via
+// the user.created/updated webhook (src/app/api/webhooks/clerk/route.ts);
+// auth() self-heals by upserting from Clerk if the webhook has not landed yet.
 
-        const user = await prisma.user.upsert({
-          where: { email },
-          update: {},
-          create: {
-            email,
-            name: email.split('@')[0],
-            emailVerified: new Date(),
-          },
-        });
+export interface AuthSession {
+  user: {
+    id: string;
+    email?: string | null;
+    name?: string | null;
+    image?: string | null;
+  };
+}
 
-        return { id: user.id, email: user.email, name: user.name, image: user.image };
+export async function auth(): Promise<AuthSession | null> {
+  const { userId } = await clerkAuth();
+  if (!userId) return null;
+
+  let user = await prisma.user.findUnique({ where: { clerkId: userId } });
+  if (!user) {
+    // Webhook not landed yet (or local dev) — sync directly from Clerk.
+    const cu = await currentUser();
+    if (!cu) return null;
+    const email = cu.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
+    user = await prisma.user.upsert({
+      where: { clerkId: userId },
+      update: {
+        email: email ?? undefined,
+        name: cu.fullName ?? email?.split('@')[0] ?? undefined,
+        image: cu.imageUrl || undefined,
       },
-    }),
-  ],
-  session: {
-    strategy: 'jwt',
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-  pages: {
-    signIn: '/auth/signin',
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user?.id) {
-        token.sub = user.id;
-      }
-      return token;
+      create: {
+        clerkId: userId,
+        email,
+        name: cu.fullName ?? email?.split('@')[0] ?? null,
+        image: cu.imageUrl || null,
+        emailVerified: email ? new Date() : null,
+      },
+    });
+  }
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
     },
-    async session({ session, token }) {
-      if (token.sub) {
-        session.user.id = token.sub;
-      }
-      return session;
-    },
-  },
-});
+  };
+}

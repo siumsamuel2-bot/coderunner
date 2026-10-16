@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
-import { signOut } from '@/auth';
+import { SignOutLink } from '@/components/SignOutLink';
 import { requireAdmin } from '@/lib/admin';
 import { revalidatePath } from 'next/cache';
 
@@ -77,19 +77,7 @@ export default async function AdminPage() {
                 {session.user.email}
               </p>
             </div>
-            <form
-              action={async () => {
-                'use server';
-                await signOut({ redirectTo: '/' });
-              }}
-            >
-              <button
-                type='submit'
-                className='px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg'
-              >
-                Sign Out
-              </button>
-            </form>
+            <SignOutLink />
           </div>
         </div>
 

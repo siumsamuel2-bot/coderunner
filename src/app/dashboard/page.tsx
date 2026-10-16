@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
-import { auth, signOut } from '@/auth';
+import { auth } from '@/auth';
+import { SignOutLink } from '@/components/SignOutLink';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,19 +68,7 @@ export default async function DashboardPage() {
                 {session.user.email}
               </p>
             </div>
-            <form
-              action={async () => {
-                'use server';
-                await signOut({ redirectTo: '/' });
-              }}
-            >
-              <button
-                type='submit'
-                className='px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg'
-              >
-                Sign Out
-              </button>
-            </form>
+            <SignOutLink />
           </div>
         </div>
 

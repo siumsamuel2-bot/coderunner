@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
-import type { Session } from 'next-auth';
 
 /**
  * Server-owned admin allowlist. Replaces the previous hardcoded
@@ -38,7 +37,7 @@ export interface AuthedSession {
  * unauthenticated/non-admin callers to the sign-in page.
  */
 export async function requireAdmin(): Promise<AuthedSession> {
-  const session: Session | null = await auth();
+  const session = await auth();
   if (!session?.user?.id || !isAdminEmail(session.user.email)) {
     redirect('/auth/signin');
   }

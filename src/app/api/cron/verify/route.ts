@@ -1,18 +1,15 @@
-
 import { NextResponse } from "next/server";
-import { processVerificationJobs } from "@/lib/verification/queue";
+import { getVerificationQueueStats } from "@/lib/verification/queue";
 
 /**
  * POST /api/cron/verify
  *
- * In-app cron caller for processVerificationJobs() (SPE-120 Task 1).
- * Processes pending verification jobs until the queue is drained (capped
- * to avoid long-running requests), so jobs don't orphan in 'pending'
- * state ('Verifying... forever' symptom from SPE-105 blocker #1).
+ * Job EXECUTION moved to the external verification worker (Node host via
+ * GitHub Actions scheduled workflow) — this app runs on Cloudflare Workers,
+ * which cannot host the Playwright harness (SPE-123).
  *
- * This replaces the missing production worker story — Railway cron can
- * ping this endpoint on a schedule, or the verification-worker script
- * can call processVerificationJobs() directly.
+ * This endpoint now reports queue stats for monitoring so stale jobs are
+ * visible. The worker drains 'pending' jobs directly.
  *
  * Auth: Authorization: Bearer ${CRON_SECRET}
  */
@@ -31,24 +28,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const MAX_BATCH = 20;
-  let processed = 0;
-
-  while (await processVerificationJobs() !== null && processed < MAX_BATCH) {
-    processed += 1;
-  }
-
-  const drained = processed < MAX_BATCH;
-
-  console.log(`[cron/verify] processed ${processed} job(s), drained=${drained}`);
+  const stats = await getVerificationQueueStats();
 
   return NextResponse.json(
     {
-      processed,
-      drained,
-      message: drained
-        ? "Verification queue drained"
-        : `Batch cap (${MAX_BATCH}) reached; run again to continue`,
+      ...stats,
+      message:
+        "Verification execution moved to external worker (GitHub Actions). Stats are informational only.",
     },
     { status: 200 }
   );

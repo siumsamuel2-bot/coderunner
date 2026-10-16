@@ -6,6 +6,10 @@ import { fileURLToPath } from "node:url";
 const projectDir = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  // Pin the output file tracing root to this project. A stray lockfile in the
+  // parent workspace otherwise makes Next nest standalone output under
+  // standalone/coderunner/, which breaks the OpenNext bundle step (SPE-123).
+  outputFileTracingRoot: projectDir,
   async redirects() {
     return [
       { source: "/login", destination: "/auth/signin", permanent: true },

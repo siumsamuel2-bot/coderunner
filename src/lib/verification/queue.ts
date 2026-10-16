@@ -1,6 +1,8 @@
-
 import { prisma } from '@/lib/prisma';
-import { triggerVerification } from './service';
+
+// App-safe queue operations (DB only). Job EXECUTION (Playwright harness) is
+// Node-only and lives in runner.ts, imported exclusively by the external
+// verification worker (GitHub Actions) so the app bundle stays edge-safe.
 
 export interface VerificationJobData {
   challengeId: string;
@@ -30,81 +32,47 @@ export async function addVerificationJob(data: VerificationJobData) {
 }
 
 /**
- * Process verification jobs from the queue
- * This function should be called by a background worker
+ * Atomically claim the next pending verification job.
+ * Marks it 'processing' and increments attempts. Returns null when the
+ * queue is empty. The caller is responsible for completing or re-queueing.
  */
-export async function processVerificationJobs() {
-  // Get the next pending job
+export async function claimNextPendingJob() {
   const job = await prisma.verificationJob.findFirst({
-    where: {
-      status: 'pending',
-    },
-    orderBy: {
-      createdAt: 'asc',
-    },
-    include: {
-      challenge: true,
-      run: true,
-    },
+    where: { status: 'pending' },
+    orderBy: { createdAt: 'asc' },
+    include: { challenge: true, run: true },
   });
 
-  if (!job) {
-    // No pending jobs
-    return null;
-  }
+  if (!job) return null;
 
-  // Mark job as processing
-  await prisma.verificationJob.update({
+  return prisma.verificationJob.update({
     where: { id: job.id },
-    data: {
-      status: 'processing',
-      attempts: { increment: 1 },
-    },
+    data: { status: 'processing', attempts: { increment: 1 } },
+    include: { challenge: true, run: true },
   });
+}
 
-  try {
-    // Run the verification
-    await triggerVerification({
-      challengeId: job.challengeId,
-      targetUrl: job.targetUrl,
-      runId: job.runId,
-    });
-
-    // Mark job as completed
+/**
+ * Re-queue a failed job if attempts remain, otherwise mark it failed.
+ */
+export async function failOrRetryJob(
+  jobId: string,
+  attempts: number,
+  maxAttempts: number | null,
+  error: unknown
+) {
+  const message = error instanceof Error ? error.message : String(error);
+  const cap = maxAttempts ?? 3;
+  if (attempts < cap) {
     await prisma.verificationJob.update({
-      where: { id: job.id },
-      data: {
-        status: 'completed',
-      },
+      where: { id: jobId },
+      data: { status: 'pending', error: message },
     });
-
-    return job;
-  } catch (error) {
-    console.error(`Verification job ${job.id} failed:`, error);
-
-    // Check if we should retry
-    const maxAttempts = job.maxAttempts ?? 3;
-    if (job.attempts < maxAttempts) {
-      // Mark as pending for retry
-      await prisma.verificationJob.update({
-        where: { id: job.id },
-        data: {
-          status: 'pending',
-          error: error instanceof Error ? error.message : String(error),
-        },
-      });
-    } else {
-      // Mark as failed after max attempts
-      await prisma.verificationJob.update({
-        where: { id: job.id },
-        data: {
-          status: 'failed',
-          error: error instanceof Error ? error.message : String(error),
-        },
-      });
-    }
-
-    throw error;
+  } else {
+    await prisma.verificationJob.update({
+      where: { id: jobId },
+      data: { status: 'failed', error: message },
+    });
   }
 }
 
@@ -127,4 +95,3 @@ export async function getVerificationQueueStats() {
     total: pending + processing + completed + failed,
   };
 }
-

@@ -1,5 +1,9 @@
 
-import { processVerificationJobs } from '@/lib/verification/queue';
+// NODE-ONLY external verification worker (CTO architecture, SPE-123).
+// Runs on a Node host (GitHub Actions scheduled workflow) and drains the
+// verification queue by executing the Playwright harness directly against
+// the DB. Never import this from the Next.js app.
+import { processVerificationJobs } from '@/lib/verification/runner';
 import { prisma } from '@/lib/prisma';
 
 async function main() {
