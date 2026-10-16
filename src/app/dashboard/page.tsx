@@ -139,7 +139,16 @@ export default async function DashboardPage() {
                       </div>
 
                       <div className='text-right space-x-3'>
-                        {run.status === 'verified' && run.elapsedMs !== null ? (
+                        {run.verification?.status === 'failed' ? (
+                          <>
+                            <p className='text-xs text-red-600 dark:text-red-400'>
+                              Failed
+                            </p>
+                            <p className='mt-1 text-xs text-red-600 dark:text-red-400'>
+                              Verification failed
+                            </p>
+                          </>
+                        ) : run.status === 'verified' && run.elapsedMs !== null ? (
                           <>
                             <p className='text-sm font-semibold text-indigo-600'>
                               {(run.elapsedMs / 1000).toFixed(2)}s
@@ -161,12 +170,6 @@ export default async function DashboardPage() {
                             Failed
                           </p>
                         )}
-
-                        {run.verification?.status === 'failed' ? (
-                          <p className='mt-1 text-xs text-red-600 dark:text-red-400'>
-                            Verification failed
-                          </p>
-                        ) : null}
                       </div>
                     </div>
                   </div>

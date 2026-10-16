@@ -67,6 +67,15 @@ export async function GET(request: Request) {
               currentRun.status !== lastStatus ||
               currentRun.updatedAt > lastUpdatedAt
             ) {
+              // Re-fetch verification record to surface latest failure reason
+              const currentVerification = await prisma.verification.findUnique({
+                where: { runId },
+                select: {
+                  status: true,
+                  testOutput: true,
+                },
+              });
+
               // Send update
               controller.enqueue(
                 'data: ' + JSON.stringify({
@@ -77,6 +86,13 @@ export async function GET(request: Request) {
                     elapsedMs: currentRun.elapsedMs,
                     endedAt: currentRun.endedAt,
                     updatedAt: currentRun.updatedAt,
+                    // Surface failure reason from the verification record
+                    failureReason:
+                      currentRun.status === "failed"
+                        ? currentVerification?.testOutput ?? null
+                        : null,
+                    verificationStatus:
+                      currentVerification?.status ?? null,
                   }
                 }) + '\n\n'
               );

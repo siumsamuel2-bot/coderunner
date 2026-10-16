@@ -69,6 +69,15 @@ export async function processVerificationResults(
       skipped: number;
       requiredFailed?: number;
     };
+    checks?: Array<{
+      id: string;
+      name: string;
+      severity: string;
+      status: string;
+      durationMs: number;
+      error: string | null;
+      evidence: string[];
+    }>;
   }
 ): Promise<void> {
   try {
@@ -88,13 +97,25 @@ export async function processVerificationResults(
     // Determine if verification passed
     const passed = report.verdict === 'pass';
     
+    // Build per-check breakdown for the results page
+    const checksBreakdown = report.checks?.map((c) => ({
+      id: c.id,
+      name: c.name,
+      severity: c.severity,
+      status: c.status,
+      error: c.error,
+      evidence: c.evidence,
+    }));
+    
     // Update the run with verification results
+    // elapsedMs is computed server-side at submit (now - startedAt) and must
+    // not be overwritten by the harness Playwright runtime (SPE-119).
     await prisma.run.update({
       where: { id: runId },
       data: {
         status: passed ? 'verified' : 'failed',
         endedAt: new Date(report.finishedAt),
-        elapsedMs: report.durationMs || 0,
+        ...(run.elapsedMs == null ? { elapsedMs: report.durationMs ?? null } : {}),
       },
     });
     
@@ -109,19 +130,18 @@ export async function processVerificationResults(
       testOutput = 'Verification completed';
     }
     
-    // Create or update verification record
+    // Create or update verification record with full check data
+    const verificationData = {
+      status: passed ? 'passed' : 'failed',
+      testOutput: testOutput,
+      ...(checksBreakdown ? { reportData: checksBreakdown } : {}),
+      verifiedAt: new Date(),
+    };
+
     await prisma.verification.upsert({
       where: { runId },
-      update: {
-        status: passed ? 'passed' : 'failed',
-        testOutput: testOutput,
-        verifiedAt: new Date(),
-      },
-      create: {
-        runId,
-        status: passed ? 'passed' : 'failed',
-        testOutput: testOutput,
-      },
+      update: verificationData,
+      create: { runId, ...verificationData },
     });
   } catch (error) {
     console.error(`Error processing verification results for run ${runId}:`, error);

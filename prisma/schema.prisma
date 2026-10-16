@@ -82,6 +82,7 @@ model Run {
   startedAt   DateTime  @default(now())
   endedAt     DateTime?
   elapsedMs   Int?
+  attempt     Int       @default(1)
   promptChain Json?
   toolLog     Json?
   createdAt   DateTime  @default(now())
@@ -97,6 +98,7 @@ model Verification {
   runId      String   @unique
   status     String
   testOutput String?
+  reportData Json?
   verifiedAt DateTime @default(now())
   run        Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
 }
