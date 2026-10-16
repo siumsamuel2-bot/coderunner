@@ -1,7 +1,6 @@
 
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@/generated/prisma/client";
-import { neon } from "@neondatabase/serverless";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -43,15 +42,14 @@ function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
   // Neon uses the HTTP driver (@prisma/adapter-neon + @neondatabase/serverless)
   // which works on Cloudflare Pages edge runtime (no Node TCP needed).
-  const sql = neon(connectionString);
-  const adapter = new PrismaNeon(sql);
+  const adapter = new PrismaNeon({ connectionString });
   const client = new PrismaClient({ adapter });
   // Retry transient connection errors so a sleeping/waking Neon yields a slow
   // response instead of a 500.
   return client.$extends({
     query: {
       $allModels: {
-        async $allOperations({ operation, args, query }) {
+        async $allOperations({ args, query }) {
           return withRetry(() => query(args));
         },
       },

@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/auth';
 
 import { SubmitRunForm } from './SubmitRunForm';
 
@@ -22,8 +21,6 @@ export default async function ChallengeDetailPage({
   if (!challenge) {
     notFound();
   }
-
-  const session = await auth();
 
   return (
     <div className='min-h-screen bg-zinc-50 dark:bg-black py-12'>
@@ -75,10 +72,7 @@ export default async function ChallengeDetailPage({
           </div>
         </div>
 
-        <SubmitRunForm
-          challengeId={challenge.id}
-          userId={session?.user?.id ?? null}
-        />
+        <SubmitRunForm challengeId={challenge.id} />
       </div>
     </div>
   );

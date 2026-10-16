@@ -7,10 +7,8 @@ import { useVerificationUpdates } from '@/lib/verification/sse-hook';
 
 export function SubmitRunForm({
   challengeId,
-  userId,
 }: {
   challengeId: string;
-  userId: string | null;
 }) {
   const router = useRouter();
   const [submittedUrl, setSubmittedUrl] = useState('');
@@ -30,18 +28,18 @@ export function SubmitRunForm({
     setRunId(null);
 
     try {
-      if (!userId) {
-        router.push('/auth/signin');
-        return;
-      }
-
       // Step 1: server-side run start — records startedAt, enforces one
-      // active run per user per challenge (SPE-119).
+      // active run per user per challenge (SPE-119). 401 = unauthenticated.
       const startResponse = await fetch('/api/runs/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ challengeId }),
       });
+
+      if (startResponse.status === 401) {
+        router.push('/auth/signin');
+        return;
+      }
 
       if (startResponse.status === 409) {
         const conflict = await startResponse.json();

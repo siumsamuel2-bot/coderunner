@@ -1,8 +1,8 @@
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaNeon } from "@prisma/adapter-neon";
 import { Prisma, PrismaClient } from "../src/generated/prisma/client";
 
 const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
+const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString: url }) });
 
 /**
  * Challenge spec schema (SPE-108). Runtime-validated at seed time so a bad
