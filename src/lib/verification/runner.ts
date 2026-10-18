@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma-node';
 import { runVerification } from '@coderunner/verification-harness/src/cli.ts';
 import { join } from 'node:path';
 import { mkdir } from 'node:fs/promises';
@@ -8,6 +8,8 @@ import { mkdir } from 'node:fs/promises';
 // cannot run on Cloudflare Workers. Per CTO architecture (SPE-123), the
 // harness runs on an external Node host (GitHub Actions scheduled workflow)
 // that drains the queue and posts results.
+// Uses the nodejs-runtime Prisma client (@/lib/prisma-node): the app's
+// workerd-runtime client cannot load its WASM compiler under plain Node.
 
 import { processVerificationResults } from './service';
 import { claimNextPendingJob, failOrRetryJob } from './queue';
@@ -69,7 +71,7 @@ export async function triggerVerification(options: {
  * NODE-ONLY. Returns the processed job, or null when the queue is empty.
  */
 export async function processVerificationJobs() {
-  const job = await claimNextPendingJob();
+  const job = await claimNextPendingJob(prisma);
   if (!job) return null;
 
   try {
@@ -87,7 +89,7 @@ export async function processVerificationJobs() {
     return job;
   } catch (error) {
     console.error(`Verification job ${job.id} failed:`, error);
-    await failOrRetryJob(job.id, job.attempts, job.maxAttempts, error);
+    await failOrRetryJob(job.id, job.attempts, job.maxAttempts, error, prisma);
     throw error;
   }
 }

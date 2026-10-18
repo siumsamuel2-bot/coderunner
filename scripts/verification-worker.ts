@@ -4,7 +4,7 @@
 // verification queue by executing the Playwright harness directly against
 // the DB. Never import this from the Next.js app.
 import { processVerificationJobs } from '@/lib/verification/runner';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma-node';
 
 async function main() {
   console.log('Starting verification worker...');

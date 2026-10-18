@@ -1,5 +1,5 @@
 
-import { PrismaNeon } from "@prisma/adapter-neon";
+import { PrismaNeonHttp } from "@prisma/adapter-neon";
 import { PrismaClient } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
@@ -40,9 +40,15 @@ function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 
 function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-  // Neon uses the HTTP driver (@prisma/adapter-neon + @neondatabase/serverless)
-  // which works on Cloudflare Pages edge runtime (no Node TCP needed).
-  const adapter = new PrismaNeon({ connectionString });
+  // PrismaNeonHttp uses the Neon HTTP (fetch) transport: stateless, safe for
+  // Cloudflare Workers. The WS-based PrismaNeon keeps pooled sockets alive
+  // across requests, which workerd forbids ("Cannot perform I/O on behalf of
+  // a different request" + hung requests). HTTP mode does not support
+  // transactions — the app avoids $transaction (verified SPE-123).
+  const adapter = new PrismaNeonHttp(connectionString, {
+    arrayMode: false,
+    fullResults: false,
+  });
   const client = new PrismaClient({ adapter });
   // Retry transient connection errors so a sleeping/waking Neon yields a slow
   // response instead of a 500.

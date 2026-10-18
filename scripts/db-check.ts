@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma-node";
 
 async function main() {
   const tables = await prisma.$queryRawUnsafe<{ tablename: string }[]>(

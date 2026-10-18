@@ -1,8 +1,8 @@
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/prisma-node';
 
-// DB-only verification result processing. Safe to import from the app bundle
-// (Workers/edge) — the Playwright harness lives in runner.ts, which must only
-// be imported from Node hosts (scripts/verification-worker.ts).
+// DB-only verification result processing. Runs on the Node verification
+// worker (imported by runner.ts); uses the nodejs-runtime Prisma client since
+// the app's workerd client cannot load its WASM compiler under plain Node.
 
 export async function processVerificationResults(
   runId: string,

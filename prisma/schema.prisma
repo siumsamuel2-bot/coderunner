@@ -1,6 +1,18 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  // workerd: emits a static .wasm import (wasm-worker-loader) instead of
+  // base64-decoding + new WebAssembly.Module(), which Cloudflare Workers
+  // rejects ("Wasm code generation disallowed by embedder").
+  runtime = "workerd"
+}
+
+// Second generation for Node hosts (seed, db-check, verification worker on
+// GitHub Actions): the workerd runtime's `?module` wasm import does not
+// resolve under plain Node/tsx, so Node consumers import this client instead.
+generator clientNode {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-node"
 }
 
 datasource db {
