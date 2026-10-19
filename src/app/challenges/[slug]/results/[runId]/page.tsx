@@ -4,6 +4,10 @@ import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import { formatDuration } from '@/lib/format';
+
+import { CopyResultButton } from '@/components/challenges/CopyResultButton';
+import { ResultStatusWatcher } from '@/components/challenges/ResultStatusWatcher';
 
 type CheckResult = {
   id: string;
@@ -16,6 +20,16 @@ type CheckResult = {
 
 export const dynamic = 'force-dynamic';
 
+const FAIL_FIRST_ORDER = ['fail', 'skip', 'pass'];
+
+/**
+ * Submission result page (SPE-134, from the SPE-127 spec §3). Labels match
+ * stored semantics: Started (run.startedAt), Verification completed
+ * (run.endedAt — when the verdict was recorded), Total time (server-computed
+ * elapsedMs), Rank (among verified runs). Only real backend metrics render:
+ * no score block (scoring v1 is not implemented), no evidence links
+ * (harness evidence entries are file paths, not URLs).
+ */
 export default async function RunResultsPage({
   params,
 }: {
@@ -70,21 +84,32 @@ export default async function RunResultsPage({
   const requiredPassed = requiredChecks.filter((c) => c.status === 'pass');
   const requiredFailed = requiredChecks.filter((c) => c.status === 'fail');
 
+  const byFailFirst = (a: CheckResult, b: CheckResult) =>
+    FAIL_FIRST_ORDER.indexOf(a.status) - FAIL_FIRST_ORDER.indexOf(b.status);
+  const requiredSorted = [...requiredChecks].sort(byFailFirst);
+  const bonusSorted = [...bonusChecks].sort(byFailFirst);
+
   let rank: number | null = null;
+  let verifiedTotal = 0;
   if (run.status === 'verified' && run.elapsedMs !== null) {
-    const fasterCount = await prisma.run.count({
-      where: {
-        challengeId: challenge.id,
-        status: 'verified',
-        elapsedMs: { lt: run.elapsedMs },
-      },
-    });
+    const [fasterCount, totalCount] = await Promise.all([
+      prisma.run.count({
+        where: {
+          challengeId: challenge.id,
+          status: 'verified',
+          elapsedMs: { lt: run.elapsedMs },
+        },
+      }),
+      prisma.run.count({
+        where: { challengeId: challenge.id, status: 'verified' },
+      }),
+    ]);
     rank = fasterCount + 1;
+    verifiedTotal = totalCount;
   }
 
   const isVerified = run.status === 'verified';
   const isFailed = run.status === 'failed';
-  const isVerifying = run.status === 'verifying' || run.status === 'submitted';
 
   const badgeClass = (passed: boolean) =>
     passed
@@ -97,6 +122,11 @@ export default async function RunResultsPage({
       : status === 'fail'
         ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
         : 'bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-400';
+
+  const startedAtLabel = new Date(run.startedAt).toLocaleString();
+  const verificationCompletedLabel = run.endedAt
+    ? new Date(run.endedAt).toLocaleString()
+    : 'Pending';
 
   return (
     <div className='min-h-screen bg-zinc-50 dark:bg-black py-12'>
@@ -116,6 +146,7 @@ export default async function RunResultsPage({
           </h1>
         </div>
 
+        {/* Result header */}
         <div
           className={`rounded-xl shadow-sm p-6 mb-6 ${
             isVerified
@@ -125,42 +156,69 @@ export default async function RunResultsPage({
                 : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
           }`}
         >
-          <div className='flex items-center space-x-3'>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              isVerified
-                ? 'bg-green-600 text-white'
-                : isFailed
-                  ? 'bg-red-600 text-white'
-                  : 'bg-blue-600 text-white animate-pulse'
-            }`}>
-              {isVerified ? '✓' : isFailed ? '✕' : '⟳'}
-            </div>
-            <div>
-              <h2 className={`
-                text-lg font-semibold
-                ${isVerified ? 'text-green-800 dark:text-green-400' :
-                isFailed ? 'text-red-800 dark:text-red-400' :
-                'text-blue-800 dark:text-blue-400'}
-              `}>
-                {isVerified
-                  ? 'Verified!'
+          <div className='flex items-center justify-between gap-4'>
+            <div className='flex items-center space-x-3'>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                isVerified
+                  ? 'bg-green-600 text-white'
                   : isFailed
-                    ? 'Verification Failed'
-                    : isVerifying
-                      ? 'Verification in Progress'
-                      : 'Submitted'}
-              </h2>
-              <p className='text-sm text-gray-600 dark:text-gray-400'>
-                {isVerified
-                  ? `Completed in ${(run.elapsedMs ?? 0) / 1000}s`
-                  : isFailed
-                    ? 'Your submission did not pass all required checks.'
-                    : 'Waiting for verification to complete...'}
-              </p>
+                    ? 'bg-red-600 text-white'
+                    : 'bg-blue-600 text-white animate-pulse'
+              }`}>
+                {isVerified ? '✓' : isFailed ? '✕' : '⟳'}
+              </div>
+              <div>
+                <h2 className={`
+                  text-lg font-semibold
+                  ${isVerified ? 'text-green-800 dark:text-green-400' :
+                  isFailed ? 'text-red-800 dark:text-red-400' :
+                  'text-blue-800 dark:text-blue-400'}
+                `}>
+                  {isVerified
+                    ? 'Verified ✓'
+                    : isFailed
+                      ? 'Verification failed'
+                      : 'Verification in progress'}
+                </h2>
+                {isVerified && run.elapsedMs !== null ? (
+                  <p
+                    title={`${run.elapsedMs} ms`}
+                    className='text-sm text-gray-600 dark:text-gray-400'
+                  >
+                    {challenge.title} · completed in{' '}
+                    <span className='font-semibold'>{formatDuration(run.elapsedMs)}</span>
+                    {rank !== null && (
+                      <>
+                        {' '}· ranked #{rank}
+                        {verifiedTotal > 0 ? ` of ${verifiedTotal}` : ''}
+                      </>
+                    )}
+                  </p>
+                ) : isFailed ? (
+                  <p className='text-sm text-gray-600 dark:text-gray-400'>
+                    {requiredFailed.length} of {requiredChecks.length} required
+                    checks failed.
+                  </p>
+                ) : (
+                  <p className='text-sm text-gray-600 dark:text-gray-400'>
+                    <ResultStatusWatcher runId={run.id} />
+                  </p>
+                )}
+              </div>
             </div>
+            {isVerified && run.elapsedMs !== null && (
+              <span
+                title={`${run.elapsedMs} ms`}
+                className='text-2xl font-bold text-green-700 dark:text-green-400'
+                style={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {formatDuration(run.elapsedMs)}
+              </span>
+            )}
           </div>
         </div>
 
+        {/* Details — labels match stored semantics (SPE-127 §3.2) */}
         <div className='bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6'>
           <h3 className='mb-4 text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
             Submission Details
@@ -176,20 +234,29 @@ export default async function RunResultsPage({
             </div>
             <div>
               <p className='text-xs font-medium text-gray-500 dark:text-gray-400 mb-1'>
-                Submitted
+                Started
               </p>
               <p className='text-gray-900 dark:text-gray-100'>
-                {new Date(run.startedAt).toLocaleString()}
+                {startedAtLabel}
               </p>
             </div>
             <div>
               <p className='text-xs font-medium text-gray-500 dark:text-gray-400 mb-1'>
-                Completion Time
+                Verification completed
               </p>
               <p className='text-gray-900 dark:text-gray-100'>
-                {run.elapsedMs !== null
-                  ? `${(run.elapsedMs / 1000).toFixed(2)}s`
-                  : 'N/A'}
+                {verificationCompletedLabel}
+              </p>
+            </div>
+            <div>
+              <p className='text-xs font-medium text-gray-500 dark:text-gray-400 mb-1'>
+                Total time
+              </p>
+              <p
+                title={run.elapsedMs !== null ? `${run.elapsedMs} ms` : undefined}
+                className='text-gray-900 dark:text-gray-100'
+              >
+                {run.elapsedMs !== null ? formatDuration(run.elapsedMs) : 'Pending'}
               </p>
             </div>
             <div>
@@ -198,17 +265,25 @@ export default async function RunResultsPage({
               </p>
               <p className='text-gray-900 dark:text-gray-100'>
                 {rank !== null ? `#${rank}` : '—'}
-                {rank !== null && run.elapsedMs !== null ? ' (among verified runs)' : ''}
+                {rank !== null && verifiedTotal > 0
+                  ? ` of ${verifiedTotal} verified`
+                  : ''}
               </p>
-              {rank === null && run.status !== 'verified' && (
+              {rank === null && !isVerified && (
                 <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
                   Rank shown once verification passes.
                 </p>
               )}
             </div>
           </div>
+          <p className='mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-500'>
+            Run {run.id.slice(0, 8)} · attempt #{run.attempt}
+          </p>
         </div>
 
+        {/* Score block intentionally absent: scoring v1 is not implemented.
+            Evidence links intentionally absent: harness evidence entries are
+            evidence-directory file paths, not URLs (SPE-127 §3.2). */}
         {reportData && (
           <div className='bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6'>
             <h3 className='mb-4 text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
@@ -226,11 +301,17 @@ export default async function RunResultsPage({
               </span>
             </div>
 
+            {requiredFailed.length > 0 && (
+              <p className='mb-3 text-sm font-medium text-red-600 dark:text-red-400'>
+                Failed checks ({requiredFailed.length})
+              </p>
+            )}
+
             <div className='space-y-3'>
               <div className='mb-2 px-3 py-1 text-xs font-semibold bg-gray-50 dark:bg-gray-700/50 rounded'>
                 Required Checks
               </div>
-              {requiredChecks.map((check) => (
+              {requiredSorted.map((check) => (
                 <div
                   key={check.id}
                   className='flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700'
@@ -258,7 +339,7 @@ export default async function RunResultsPage({
                   <div className='mt-4 mb-2 px-3 py-1 text-xs font-semibold bg-gray-50 dark:bg-gray-700/50 rounded'>
                     Bonus Checks
                   </div>
-                  {bonusChecks.map((check) => (
+                  {bonusSorted.map((check) => (
                     <div
                       key={check.id}
                       className='flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700'
@@ -297,30 +378,34 @@ export default async function RunResultsPage({
           </div>
         )}
 
+        {/* Closing actions (SPE-127 §3.2 table) */}
         <div className='grid gap-3 sm:grid-cols-3'>
-          {isVerified && (
-            <Link
-              href='/leaderboard'
-              className='flex items-center justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700'
-            >
-              View Leaderboard
-            </Link>
-          )}
           <Link
-            href={`/challenges/${slug}`}
-            className='flex items-center justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700'
+            href={`/leaderboard#${slug}`}
+            className='flex items-center justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'
           >
-            Try Another Challenge
+            View leaderboard
+          </Link>
+          <Link
+            href='/challenges'
+            className='flex items-center justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'
+          >
+            Try another challenge
           </Link>
           {isFailed && (
-            <button
-              className='flex items-center justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800'
-              onClick={() => {
-                window.location.reload();
-              }}
+            <Link
+              href={`/challenges/${slug}`}
+              className='flex items-center justify-center py-3 px-4 border border-indigo-300 rounded-lg shadow-sm text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'
             >
-              Retry
-            </button>
+              Start a new attempt
+            </Link>
+          )}
+          {isVerified && run.elapsedMs !== null && rank !== null && (
+            <CopyResultButton
+              challengeTitle={challenge.title}
+              elapsedMs={run.elapsedMs}
+              rank={rank}
+            />
           )}
         </div>
       </div>
