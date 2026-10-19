@@ -3,6 +3,10 @@ import { notFound } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
 
+import { AiBadge } from '@/components/challenges/AiBadge';
+import { CategoryChip } from '@/components/challenges/CategoryChip';
+import { DifficultyBadge } from '@/components/challenges/DifficultyBadge';
+
 import { SubmitRunForm } from './SubmitRunForm';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +45,10 @@ export default async function ChallengeDetailPage({
         </div>
 
         <div className='bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8'>
+          <div className='mb-4 flex flex-wrap items-center gap-2'>
+            <CategoryChip category={challenge.category} />
+            <AiBadge aiAllowed={challenge.aiAllowed} />
+          </div>
           <p className='text-gray-700 dark:text-gray-300 mb-4'>
             {challenge.description}
           </p>
@@ -49,16 +57,14 @@ export default async function ChallengeDetailPage({
               <p className='text-sm font-medium text-gray-500 dark:text-gray-400 mb-1'>
                 Difficulty
               </p>
-              <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-                {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
-              </p>
+              <DifficultyBadge difficulty={challenge.difficulty} />
             </div>
             <div>
               <p className='text-sm font-medium text-gray-500 dark:text-gray-400 mb-1'>
                 Estimated Time
               </p>
               <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-                {challenge.estimatedMinutes} minutes
+                ~{challenge.estimatedMinutes} minutes
               </p>
             </div>
           </div>

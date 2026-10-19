@@ -1,75 +1,72 @@
-import { prisma } from "@/lib/prisma";
-import Link from "next/link";
+import Link from 'next/link';
 
-export const dynamic = "force-dynamic";
+import { prisma } from '@/lib/prisma';
+import type { ChallengeListItem } from '@/lib/challenge-filters';
 
-const LANGUAGE_LABELS: Record<string, string> = {
-  typescript: "TypeScript",
-  python: "Python",
-};
+import { ChallengeBrowser } from '@/components/challenges/ChallengeFilters';
 
+export const dynamic = 'force-dynamic';
+
+/**
+ * Challenges listing (SPE-131). Server component fetches the catalog plus
+ * real per-challenge stats (attempt count, fastest verified completion)
+ * computed from the runs table; the client component handles filtering.
+ * Only backend-backed metrics are rendered — nothing is invented.
+ */
 export default async function ChallengesPage() {
-  const challenges = await prisma.challenge.findMany({
-    orderBy: [{ language: "asc" }, { difficulty: "asc" }, { title: "asc" }],
-  });
+  const [challenges, runs] = await Promise.all([
+    prisma.challenge.findMany(),
+    prisma.run.findMany({
+      select: { challengeId: true, status: true, elapsedMs: true },
+    }),
+  ]);
 
-  const languages = [...new Set(challenges.map((c) => c.language))].sort(
-    (a, b) => (LANGUAGE_LABELS[a] ?? a).localeCompare(LANGUAGE_LABELS[b] ?? b)
-  );
+  const attemptCounts = new Map<string, number>();
+  const fastestVerified = new Map<string, number>();
+  for (const run of runs) {
+    attemptCounts.set(run.challengeId, (attemptCounts.get(run.challengeId) ?? 0) + 1);
+    if (run.status === 'verified' && run.elapsedMs !== null) {
+      const current = fastestVerified.get(run.challengeId);
+      if (current === undefined || run.elapsedMs < current) {
+        fastestVerified.set(run.challengeId, run.elapsedMs);
+      }
+    }
+  }
+
+  const items: ChallengeListItem[] = challenges.map((challenge) => ({
+    id: challenge.id,
+    slug: challenge.slug,
+    title: challenge.title,
+    description: challenge.description,
+    difficulty: challenge.difficulty,
+    language: challenge.language,
+    category: challenge.category,
+    aiAllowed: challenge.aiAllowed,
+    estimatedMinutes: challenge.estimatedMinutes,
+    attemptCount: attemptCounts.get(challenge.id) ?? 0,
+    fastestVerifiedMs: fastestVerified.get(challenge.id) ?? null,
+  }));
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="mb-8 text-3xl font-bold text-center text-gray-900 dark:text-gray-100">
+    <div className='min-h-screen bg-zinc-50 dark:bg-black py-12'>
+      <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
+        <h1 className='mb-4 text-3xl font-bold text-center text-gray-900 dark:text-gray-100'>
           Coderunner Challenges
         </h1>
-        <p className="mb-12 text-center text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          Build apps with AI and race against the clock on verified leaderboards
+        <p className='mb-8 text-center text-gray-600 dark:text-gray-400 max-w-2xl mx-auto'>
+          Build apps with AI and race against the clock on verified leaderboards.
+          Use ChatGPT, Claude, Cursor, Copilot — or nothing. Your result is what
+          matters.
         </p>
 
-        {languages.map((language) => (
-          <section key={language} className="mb-12">
-            <h2 className="mb-6 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-              {LANGUAGE_LABELS[language] ?? language} track
-            </h2>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {challenges
-                .filter((challenge) => challenge.language === language)
-                .map((challenge) => (
-                  <Link
-                    key={challenge.id}
-                    href={`/challenges/${challenge.slug}`}
-                    className="group"
-                  >
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow transform hover:-translate-y-1 h-full">
-                      <div className="p-6">
-                        <h3 className="mb-3 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                          {challenge.title}
-                        </h3>
-                        <p className="mb-4 text-gray-600 dark:text-gray-400 line-clamp-3">
-                          {challenge.description}
-                        </p>
-                        <div className="flex items-center space-x-2 text-sm">
-                          <span className="flex items-center space-x-1">
-                            <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3"/>
-                            </svg>
-                            <span className="font-medium">{challenge.estimatedMinutes} min</span>
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium">
-                            {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-            </div>
-          </section>
-        ))}
-        <p className="mt-12 text-center text-gray-600 dark:text-gray-400">
-          Missing a category or found a bug?{" "}
-          <Link href="/feedback" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+        <ChallengeBrowser challenges={items} />
+
+        <p className='mt-12 text-center text-gray-600 dark:text-gray-400'>
+          Missing a category or found a bug?{' '}
+          <Link
+            href='/feedback'
+            className='text-indigo-600 dark:text-indigo-400 hover:underline'
+          >
             Tell us
           </Link>
           .

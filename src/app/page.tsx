@@ -1,11 +1,19 @@
 import Link from 'next/link';
 
 import { serverTrpc } from '@/utils/trpc';
+import { ChallengeCard } from '@/components/challenges/ChallengeCard';
+import { EmptyState } from '@/components/challenges/EmptyState';
+import { sortChallenges, type ChallengeListItem } from '@/lib/challenge-filters';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   const challenges = await serverTrpc.challenges.list();
+  const items: ChallengeListItem[] = challenges.map((challenge) => ({
+    ...challenge,
+    attemptCount: 0,
+    fastestVerifiedMs: null,
+  }));
 
   return (
     <div className='min-h-screen bg-zinc-50 dark:bg-black'>
@@ -21,29 +29,14 @@ export default async function Home() {
           <h2 className='mb-4 text-2xl font-semibold text-center text-gray-900 dark:text-gray-100'>
             Available Challenges
           </h2>
-          {challenges.length > 0 ? (
+          {items.length > 0 ? (
             <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-              {challenges.map((challenge) => (
-                <Link
-                  key={challenge.id}
-                  href={`/challenges/${challenge.slug}`}
-                  className='bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-shadow duration-300'
-                >
-                  <div className='px-6 py-4'>
-                    <h3 className='mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100'>
-                      {challenge.title}
-                    </h3>
-                    <p className='mb-2 text-sm text-gray-600 dark:text-gray-400'>
-                      {challenge.description}
-                    </p>
-                  </div>
-                </Link>
+              {sortChallenges(items).map((challenge) => (
+                <ChallengeCard key={challenge.id} challenge={challenge} />
               ))}
             </div>
           ) : (
-            <p className='text-center py-8 text-gray-500 dark:text-gray-400'>
-              No challenges available yet
-            </p>
+            <EmptyState variant='no-catalog' />
           )}
         </div>
 

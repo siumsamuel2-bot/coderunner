@@ -38,6 +38,14 @@ model Challenge {
   description        String
   difficulty         String
   language           String   @default("typescript")
+  // SPE-131/SPE-126: listing metadata. category is a free-form short label
+  // (algorithms, frontend, backend, full-stack, ai, data, general); the UI
+  // reads distinct values from the DB. aiAllowed=true means AI coding
+  // assistants are permitted during the run (true for all challenges today).
+  // NOTE: no timeLimitMinutes yet — nothing enforces a hard cutoff, so the
+  // UI must present estimatedMinutes as an estimate, never a limit.
+  category           String   @default("general")
+  aiAllowed          Boolean  @default(true)
   estimatedMinutes   Int
   testSpec           Json
   acceptanceCriteria String

@@ -9,6 +9,18 @@ export const dynamic = 'force-dynamic';
 const inputClasses =
   'block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm px-3 py-2 placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200';
 
+// Matches the seed's category vocabulary (SPE-126 §0); free-form values may
+// still be set directly in the DB — the listing reads distinct values.
+const CHALLENGE_CATEGORIES = [
+  'algorithms',
+  'frontend',
+  'backend',
+  'full-stack',
+  'ai',
+  'data',
+  'general',
+] as const;
+
 export default async function EditChallengePage({
   params,
 }: {
@@ -30,6 +42,8 @@ export default async function EditChallengePage({
     const description = (formData.get('description') as string).trim();
     const rawSlug = (formData.get('slug') as string).trim();
     const difficulty = (formData.get('difficulty') as string) || 'easy';
+    const category = (formData.get('category') as string) || 'general';
+    const aiAllowed = formData.get('aiAllowed') === 'on';
     const estimatedMinutes = parseInt((formData.get('estimatedMinutes') as string) || '15', 10) || 15;
     const acceptanceCriteria = ((formData.get('acceptanceCriteria') as string) || '').trim();
 
@@ -47,6 +61,8 @@ export default async function EditChallengePage({
         description,
         slug,
         difficulty,
+        category,
+        aiAllowed,
         estimatedMinutes,
         acceptanceCriteria,
       },
@@ -112,6 +128,39 @@ export default async function EditChallengePage({
                   Estimated Time (minutes)
                 </label>
                 <input type='number' name='estimatedMinutes' defaultValue={challenge.estimatedMinutes} min={1} className={inputClasses} />
+              </div>
+            </div>
+
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <div>
+                <label className='block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300'>
+                  Category
+                </label>
+                <select name='category' defaultValue={challenge.category} className={inputClasses}>
+                  {!CHALLENGE_CATEGORIES.includes(
+                    challenge.category as (typeof CHALLENGE_CATEGORIES)[number]
+                  ) ? (
+                    <option value={challenge.category}>
+                      {challenge.category} (current)
+                    </option>
+                  ) : null}
+                  {CHALLENGE_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className='flex items-end pb-2'>
+                <label className='inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300'>
+                  <input
+                    type='checkbox'
+                    name='aiAllowed'
+                    defaultChecked={challenge.aiAllowed}
+                    className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
+                  />
+                  AI coding assistants allowed
+                </label>
               </div>
             </div>
 

@@ -12,6 +12,15 @@ const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString: ur
  */
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
 const LANGUAGES = ["typescript", "python"] as const;
+const CATEGORIES = [
+  "algorithms",
+  "frontend",
+  "backend",
+  "full-stack",
+  "ai",
+  "data",
+  "general",
+] as const;
 
 interface ChallengeSpec {
   slug: string;
@@ -19,6 +28,7 @@ interface ChallengeSpec {
   description: string;
   difficulty: (typeof DIFFICULTIES)[number];
   language: (typeof LANGUAGES)[number];
+  category: (typeof CATEGORIES)[number];
   estimatedMinutes: number;
   testSpec: Prisma.InputJsonValue;
   acceptanceCriteria: string;
@@ -40,6 +50,11 @@ function validateChallengeSpec(spec: ChallengeSpec): void {
   if (!LANGUAGES.includes(spec.language)) {
     throw new Error(
       `Challenge "${label}": language must be one of ${LANGUAGES.join(", ")}`
+    );
+  }
+  if (!CATEGORIES.includes(spec.category)) {
+    throw new Error(
+      `Challenge "${label}": category must be one of ${CATEGORIES.join(", ")}`
     );
   }
   if (!Number.isInteger(spec.estimatedMinutes) || spec.estimatedMinutes <= 0) {
@@ -74,6 +89,7 @@ const challenges: ChallengeSpec[] = [
       "Build a working calculator app with +, -, *, /, clear, and decimal support.",
     difficulty: "easy",
     language: "typescript",
+    category: "algorithms",
     estimatedMinutes: 15,
     testSpec: {
       checks: [
@@ -96,6 +112,7 @@ const challenges: ChallengeSpec[] = [
       "Build a todo app with user login and full create/read/update/delete of todos.",
     difficulty: "medium",
     language: "typescript",
+    category: "full-stack",
     estimatedMinutes: 30,
     testSpec: {
       checks: [
@@ -117,6 +134,7 @@ const challenges: ChallengeSpec[] = [
       "Build a tool that accepts a PDF and extracts text and metadata.",
     difficulty: "hard",
     language: "typescript",
+    category: "data",
     estimatedMinutes: 45,
     testSpec: {
       checks: [
@@ -136,6 +154,7 @@ const challenges: ChallengeSpec[] = [
       "Build a marketing landing page with hero, features, CTA, and pricing section.",
     difficulty: "medium",
     language: "typescript",
+    category: "frontend",
     estimatedMinutes: 25,
     testSpec: {
       checks: [
@@ -156,6 +175,7 @@ const challenges: ChallengeSpec[] = [
       "Build a simple chatbot UI that responds to user messages.",
     difficulty: "easy",
     language: "typescript",
+    category: "ai",
     estimatedMinutes: 20,
     testSpec: {
       checks: [
@@ -175,6 +195,7 @@ const challenges: ChallengeSpec[] = [
       "Build a TypeScript array playground: accept a comma/space separated list of numbers and apply sort (asc/desc), filter (even/odd), map (double), reduce (sum) and dedupe operations, showing the result after each click.",
     difficulty: "medium",
     language: "typescript",
+    category: "algorithms",
     estimatedMinutes: 30,
     testSpec: {
       checks: [
@@ -205,6 +226,7 @@ const challenges: ChallengeSpec[] = [
       "Build a Python-backed string lab: accept a line of text and apply reverse, uppercase, lowercase, word count and palindrome checks, showing the result after each click.",
     difficulty: "easy",
     language: "python",
+    category: "algorithms",
     estimatedMinutes: 20,
     testSpec: {
       checks: [
@@ -233,6 +255,7 @@ const challenges: ChallengeSpec[] = [
       "Build a Python-backed JSON workbench: paste JSON, then prettify, minify, or sort object keys; invalid JSON must produce a friendly error.",
     difficulty: "medium",
     language: "python",
+    category: "data",
     estimatedMinutes: 30,
     testSpec: {
       checks: [
@@ -260,6 +283,7 @@ const challenges: ChallengeSpec[] = [
       "Build a Python-backed link shortener: submit a long URL, get a short link, and make the short link redirect to the original. Created links persist in a visible list.",
     difficulty: "hard",
     language: "python",
+    category: "backend",
     estimatedMinutes: 45,
     testSpec: {
       checks: [
@@ -286,6 +310,7 @@ async function main() {
         description: challenge.description,
         difficulty: challenge.difficulty,
         language: challenge.language,
+        category: challenge.category,
         estimatedMinutes: challenge.estimatedMinutes,
         testSpec: challenge.testSpec,
         acceptanceCriteria: challenge.acceptanceCriteria,
