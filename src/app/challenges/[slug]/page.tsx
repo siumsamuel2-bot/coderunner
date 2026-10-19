@@ -5,14 +5,14 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { capitalizeLabel } from '@/lib/format';
 import type { CheckManifest } from '@/lib/check-manifest';
+import { ACTIVE_RUN_STATUSES } from '@/lib/runs/lifecycle';
 
 import { AiBadge } from '@/components/challenges/AiBadge';
 import { CategoryChip } from '@/components/challenges/CategoryChip';
 import { CheckManifestList } from '@/components/challenges/CheckManifestList';
 import { DifficultyBadge } from '@/components/challenges/DifficultyBadge';
+import { RunPanel, type ActiveRunInfo } from '@/components/challenges/RunPanel';
 import { VerificationNotice } from '@/components/challenges/VerificationNotice';
-
-import { SubmitRunForm } from './SubmitRunForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +48,27 @@ export default async function ChallengeDetailPage({
         })
       : Promise.resolve(0),
   ]);
+
+  // RunPanel initial state (SPE-127 §1.2): a returning user with an active
+  // run lands straight in the active/resume view, never in the start form.
+  const activeRunRow = session?.user?.id
+    ? await prisma.run.findFirst({
+        where: {
+          userId: session.user.id,
+          challengeId: challenge.id,
+          status: { in: [...ACTIVE_RUN_STATUSES] },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    : null;
+  const activeRun: ActiveRunInfo | null = activeRunRow
+    ? {
+        runId: activeRunRow.id,
+        status: activeRunRow.status,
+        startedAt: activeRunRow.startedAt.toISOString(),
+        attempt: activeRunRow.attempt,
+      }
+    : null;
 
   // Requirements checklist: split the stored acceptance criteria into
   // sentence-level items. Static prose, real data, no pass/fail implied.
@@ -169,20 +190,16 @@ export default async function ChallengeDetailPage({
           <VerificationNotice />
         </section>
 
-        {/* Start challenge */}
+        {/* Run panel (states A-E, SPE-133) */}
         <section id='start' className='scroll-mt-6'>
-          <div className='rounded-xl bg-white shadow-sm p-6 ring-2 ring-indigo-500/40 dark:bg-gray-800'>
-            <h2 className='mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100'>
-              Start challenge
-            </h2>
-            <p className='mb-5 text-sm text-gray-600 dark:text-gray-400'>
-              Submit the URL where your solution is hosted. The clock starts
-              server-side when your run begins and stops when you submit —
-              your official time is computed from database timestamps, not
-              your device.
-            </p>
-            <SubmitRunForm challengeId={challenge.id} />
-          </div>
+          <RunPanel
+            challengeId={challenge.id}
+            slug={challenge.slug}
+            challengeTitle={challenge.title}
+            signedIn={Boolean(session?.user?.id)}
+            aiAllowed={challenge.aiAllowed}
+            activeRun={activeRun}
+          />
         </section>
       </div>
     </div>
