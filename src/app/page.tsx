@@ -21,8 +21,13 @@ export default async function Home() {
         <h1 className='mb-6 text-3xl font-bold text-center text-gray-900 dark:text-gray-100'>
           Coderunner
         </h1>
-        <p className='mb-8 text-center text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto'>
+        <p className='mb-3 text-center text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto'>
           Build apps with AI and race against the clock on verified leaderboards
+        </p>
+        {/* AI-native positioning, short variant (SPE-136, SPE-127 §5.1
+            placement 1): quiet statement under the hero line, not a banner. */}
+        <p className='mb-10 text-center text-sm font-medium text-gray-500 dark:text-gray-400'>
+          Build with AI. Beat the clock.
         </p>
 
         <div className='mb-12'>
