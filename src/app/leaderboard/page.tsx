@@ -2,6 +2,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 import { serverTrpc } from '@/utils/trpc';
+import {
+  VerificationNotice,
+  VerificationTrustLine,
+} from '@/components/challenges/VerificationNotice';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,9 +34,12 @@ export default async function LeaderboardPage() {
         <h1 className='mb-8 text-3xl font-bold text-center text-gray-900 dark:text-gray-100'>
           Coderunner Leaderboard
         </h1>
-        <p className='mb-12 text-center text-gray-600 dark:text-gray-400 max-w-4xl mx-auto'>
+        <p className='mb-3 text-center text-gray-600 dark:text-gray-400 max-w-4xl mx-auto'>
           Fastest verified times for each challenge
         </p>
+        <div className='mb-10 flex justify-center'>
+          <VerificationTrustLine href='#how-verification-works' />
+        </div>
 
         <div className='mb-8'>
           <div className='flex flex-wrap -mb-px'>
@@ -74,7 +81,7 @@ export default async function LeaderboardPage() {
                       Time
                     </th>
                     <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                      Verified
+                      Submitted
                     </th>
                   </tr>
                 </thead>
@@ -121,6 +128,12 @@ export default async function LeaderboardPage() {
             </div>
           </div>
         ))}
+
+        {/* Full transparency notice (SPE-139): target of the trust line
+            anchor; every row on these boards is verified by construction. */}
+        <div className='mt-12 max-w-3xl mx-auto'>
+          <VerificationNotice id='how-verification-works' />
+        </div>
       </div>
     </div>
   );

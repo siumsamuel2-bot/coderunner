@@ -8,6 +8,7 @@ import { formatDuration } from '@/lib/format';
 
 import { CopyResultButton } from '@/components/challenges/CopyResultButton';
 import { ResultStatusWatcher } from '@/components/challenges/ResultStatusWatcher';
+import { VerificationNotice } from '@/components/challenges/VerificationNotice';
 
 type CheckResult = {
   id: string;
@@ -377,6 +378,12 @@ export default async function RunResultsPage({
             </p>
           </div>
         )}
+
+        {/* Verification transparency, expanded by default (SPE-139,
+            SPE-127 §4.2 placement: results page below checks). */}
+        <div className='mb-6'>
+          <VerificationNotice defaultOpen />
+        </div>
 
         {/* Closing actions (SPE-127 §3.2 table) */}
         <div className='grid gap-3 sm:grid-cols-3'>
