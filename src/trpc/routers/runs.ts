@@ -1,6 +1,7 @@
 ﻿import { z } from 'zod';
 
 import { router, procedure } from '../_trpc';
+import { dedupeBestPerUser } from '@/lib/leaderboard';
 
 export const runsRouter = router({
   create: procedure
@@ -41,7 +42,11 @@ export const runsRouter = router({
   getLeaderboard: procedure
     .input(z.object({ challengeId: z.string().optional() }).optional())
     .query(async ({ ctx, input }) => {
-      return ctx.prisma.run.findMany({
+      // Verified runs only. Best-per-user dedup (SPE-135 dep D2, SPE-127
+      // §2.5): one rank per player — a user's slower runs never crowd the
+      // board. Catalog volume is small (one row per verified submission),
+      // so we fetch all and dedupe in JS (src/lib/leaderboard.ts).
+      const runs = await ctx.prisma.run.findMany({
         where: {
           status: 'verified',
           elapsedMs: { not: null },
@@ -51,10 +56,12 @@ export const runsRouter = router({
           user: {
             select: { id: true, name: true, image: true },
           },
-          challenge: true,
+          challenge: {
+            select: { id: true, slug: true, title: true, difficulty: true },
+          },
         },
         orderBy: { elapsedMs: 'asc' },
-        take: 50,
       });
+      return dedupeBestPerUser(runs);
     }),
 });
