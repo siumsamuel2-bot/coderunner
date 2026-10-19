@@ -2,8 +2,7 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-
-const ACTIVE_STATUSES = ['in_progress', 'submitted', 'verifying'];
+import { ACTIVE_RUN_STATUSES, nextAttemptNumber } from '@/lib/runs/lifecycle';
 
 /**
  * POST /api/runs/start
@@ -12,6 +11,11 @@ const ACTIVE_STATUSES = ['in_progress', 'submitted', 'verifying'];
  * records startedAt, and enforces one active run per user per challenge.
  * The client must call this before submitting; timing is computed
  * server-side on submit (submit - start), never sent by the client.
+ *
+ * A 409 here means an active run exists (in_progress/submitted/verifying);
+ * the body carries `runId` + `status` so the UI can offer resume (state D)
+ * or, for `in_progress`, the abandon path (SPE-128, POST
+ * /api/runs/[runId]/abandon).
  */
 export async function POST(request: Request) {
   const session = await auth();
@@ -34,7 +38,7 @@ export async function POST(request: Request) {
     where: {
       userId,
       challengeId,
-      status: { in: ACTIVE_STATUSES },
+      status: { in: [...ACTIVE_RUN_STATUSES] },
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -50,7 +54,8 @@ export async function POST(request: Request) {
     );
   }
 
-  // Attempt number = count of prior runs for this user/challenge + 1.
+  // Attempt number = count of ALL prior runs (incl. abandoned/failed) + 1.
+  // Abandoned runs consume an attempt slot (SPE-128, anti-farming).
   const priorCount = await prisma.run.count({
     where: { userId, challengeId },
   });
@@ -61,7 +66,7 @@ export async function POST(request: Request) {
       challengeId,
       status: 'in_progress',
       startedAt: new Date(),
-      attempt: priorCount + 1,
+      attempt: nextAttemptNumber(priorCount),
     },
   });
 

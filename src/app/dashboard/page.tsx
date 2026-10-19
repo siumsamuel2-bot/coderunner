@@ -154,6 +154,14 @@ export default async function DashboardPage() {
                           <p className='text-xs text-blue-600 dark:text-blue-400'>
                             Waiting for verification
                           </p>
+                        ) : run.status === 'in_progress' ? (
+                          <p className='text-xs text-gray-600 dark:text-gray-400'>
+                            Run in progress
+                          </p>
+                        ) : run.status === 'abandoned' ? (
+                          <p className='text-xs text-gray-500 dark:text-gray-500'>
+                            Abandoned
+                          </p>
                         ) : (
                           <p className='text-xs text-red-600 dark:text-red-400'>
                             Failed

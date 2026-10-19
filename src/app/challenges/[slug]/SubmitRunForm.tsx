@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation';
 
 import { useVerificationUpdates } from '@/lib/verification/sse-hook';
 
+type ActiveRunConflict = {
+  runId: string;
+  status: string;
+};
+
 export function SubmitRunForm({
   challengeId,
 }: {
@@ -16,9 +21,44 @@ export function SubmitRunForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
+  const [activeRunConflict, setActiveRunConflict] =
+    useState<ActiveRunConflict | null>(null);
+  const [isAbandoning, setIsAbandoning] = useState(false);
 
   const { runStatus, loading: verificationLoading, error: verificationError } =
     useVerificationUpdates(runId);
+
+  const handleAbandon = async () => {
+    if (!activeRunConflict) return;
+    if (
+      !window.confirm(
+        'Abandon this run? It counts as an attempt and cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    setIsAbandoning(true);
+    setSubmitError(null);
+    try {
+      const response = await fetch(
+        `/api/runs/${activeRunConflict.runId}/abandon`,
+        { method: 'POST' }
+      );
+      if (response.status === 401) {
+        router.push('/auth/signin');
+        return;
+      }
+      if (!response.ok) {
+        throw new Error('Failed to abandon run');
+      }
+      setActiveRunConflict(null);
+    } catch (error) {
+      console.error('Error abandoning run:', error);
+      setSubmitError('Failed to abandon run. Please try again.');
+    } finally {
+      setIsAbandoning(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +66,7 @@ export function SubmitRunForm({
     setSubmitSuccess(false);
     setIsSubmitting(true);
     setRunId(null);
+    setActiveRunConflict(null);
 
     try {
       // Step 1: server-side run start — records startedAt, enforces one
@@ -42,10 +83,14 @@ export function SubmitRunForm({
       }
 
       if (startResponse.status === 409) {
+        // Active run exists (SPE-119). For an in_progress run the UI offers
+        // the abandon path (SPE-128); submitted/verifying runs belong to the
+        // verification pipeline and cannot be abandoned.
         const conflict = await startResponse.json();
-        setSubmitError(
-          `You already have an active run for this challenge (${conflict.status}).`
-        );
+        setActiveRunConflict({
+          runId: conflict.runId,
+          status: conflict.status,
+        });
         setIsSubmitting(false);
         return;
       }
@@ -90,6 +135,33 @@ export function SubmitRunForm({
       <p className='mb-6 text-gray-600 dark:text-gray-400'>
         Share the URL where your solution is hosted (Vercel, Netlify, etc.)
       </p>
+
+      {activeRunConflict && (
+        <div className='mb-4 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800 px-4 py-3 rounded-md'>
+          {activeRunConflict.status === 'in_progress' ? (
+            <>
+              <p className='text-sm text-gray-900 dark:text-gray-100'>
+                You have a run in progress for this challenge. The clock has
+                been running server-side since it started — it stays active
+                until you submit or abandon it.
+              </p>
+              <button
+                type='button'
+                onClick={handleAbandon}
+                disabled={isAbandoning}
+                className='mt-2 text-xs text-gray-500 dark:text-gray-400 underline hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-50'
+              >
+                {isAbandoning ? 'Abandoning...' : 'Abandon run'}
+              </button>
+            </>
+          ) : (
+            <p className='text-sm text-gray-900 dark:text-gray-100'>
+              Your previous submission ({activeRunConflict.status}) is still in
+              verification. You can start a new attempt once it finishes.
+            </p>
+          )}
+        </div>
+      )}
 
       {submitError && (
         <div className='mb-4 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-md'>
