@@ -131,6 +131,23 @@ export function ChallengeBrowser({
   const filterControls = (
     <div className='space-y-3'>
       <div>
+        <label
+          htmlFor='challenge-search'
+          className='mb-1.5 block text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400'
+        >
+          Search
+        </label>
+        <input
+          id='challenge-search'
+          type='search'
+          value={filters.search}
+          onChange={(e) => updateFilters({ ...filters, search: e.target.value })}
+          placeholder='Search name or description'
+          aria-label='Search challenges by name or description'
+          className='w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-300 dark:placeholder-gray-500 sm:max-w-sm'
+        />
+      </div>
+      <div>
         <p className='mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400'>
           Language
         </p>

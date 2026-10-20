@@ -32,6 +32,8 @@ export interface FilterState {
   difficulties: string[];
   ai: AiFilter | null;
   time: TimeBucket | null;
+  /** Case-insensitive substring over title + description (SPE-138). */
+  search: string;
 }
 
 export const EMPTY_FILTERS: FilterState = {
@@ -40,6 +42,7 @@ export const EMPTY_FILTERS: FilterState = {
   difficulties: [],
   ai: null,
   time: null,
+  search: '',
 };
 
 /** Difficulty sort rank (SPE-126 §1.1 fixes the alphabetical-sort bug). */
@@ -87,7 +90,8 @@ export function hasActiveFilters(filters: FilterState): boolean {
     filters.categories.length > 0 ||
     filters.difficulties.length > 0 ||
     filters.ai !== null ||
-    filters.time !== null
+    filters.time !== null ||
+    filters.search.trim() !== ''
   );
 }
 
@@ -98,19 +102,32 @@ export function countActiveFilters(filters: FilterState): number {
     filters.difficulties.length;
   if (filters.ai !== null) count += 1;
   if (filters.time !== null) count += 1;
+  if (filters.search.trim() !== '') count += 1;
   return count;
+}
+
+/** Case-insensitive substring match over title + description (SPE-138). */
+export function matchesSearch(challenge: ChallengeListItem, search: string): boolean {
+  const query = search.trim().toLowerCase();
+  if (query === '') return true;
+  return (
+    challenge.title.toLowerCase().includes(query) ||
+    challenge.description.toLowerCase().includes(query)
+  );
 }
 
 /**
  * Apply filters to the full list. Categories/difficulties/languages are
  * multi-select (OR within a group, AND across groups). Empty group = no
- * constraint.
+ * constraint. Search is a case-insensitive substring over title +
+ * description.
  */
 export function applyFilters(
   challenges: ChallengeListItem[],
   filters: FilterState
 ): ChallengeListItem[] {
   return challenges.filter((challenge) => {
+    if (!matchesSearch(challenge, filters.search)) return false;
     if (
       filters.languages.length > 0 &&
       !filters.languages.includes(challenge.language)
@@ -196,6 +213,7 @@ export function parseFiltersFromParams(
     difficulties: list('difficulty', VALID_DIFFICULTIES),
     ai,
     time,
+    search: (params.get('q') ?? '').trim(),
   };
 }
 
@@ -213,6 +231,8 @@ export function serializeFiltersToParams(filters: FilterState): string {
   }
   if (filters.ai) params.set('ai', filters.ai);
   if (filters.time) params.set('time', filters.time);
+  const search = filters.search.trim();
+  if (search) params.set('q', search);
   return params.toString();
 }
 
