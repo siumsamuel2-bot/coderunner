@@ -142,7 +142,7 @@ export default async function RunResultsPage({
             </svg>
             <span>Back to {challenge.title}</span>
           </Link>
-          <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
+          <h1 className='text-3xl font-bold text-gray-900 dark:text-gray-100'>
             Submission Results
           </h1>
         </div>
