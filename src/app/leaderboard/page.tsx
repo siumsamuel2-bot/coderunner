@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 import { serverTrpc } from '@/utils/trpc';
+import { LeaderboardTable } from './LeaderboardTable';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,63 +62,7 @@ export default async function LeaderboardPage() {
             </h2>
 
             <div className='overflow-x-auto'>
-              <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
-                <thead className='bg-gray-50 dark:bg-gray-800'>
-                  <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                      Rank
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                      User
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                      Time
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                      Verified
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className='bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700'>
-                  {runsByChallenge[slug].map((run, idx) => (
-                    <tr
-                      key={run.id}
-                      className={idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-700' : ''}
-                    >
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                        {idx + 1}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100'>
-                        <span className='flex items-center space-x-3'>
-                          {run.user.image ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={run.user.image}
-                              alt={`${run.user.name ?? 'user'}'s avatar`}
-                              className='h-8 w-8 rounded-full'
-                            />
-                          ) : (
-                            <span className='h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center'>
-                              {run.user.name?.[0]?.toUpperCase()}
-                            </span>
-                          )}
-                          <span>{run.user.name || 'Anonymous'}</span>
-                        </span>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                        {run.elapsedMs !== null
-                          ? `${(run.elapsedMs / 1000).toFixed(2)}s`
-                          : 'N/A'}
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400'>
-                        {run.endedAt
-                          ? new Date(run.endedAt).toLocaleDateString()
-                          : ''}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <LeaderboardTable runs={runsByChallenge[slug]} />
             </div>
           </div>
         ))}

@@ -54,6 +54,7 @@ export const runsRouter = router({
             select: { id: true, name: true, image: true },
           },
           challenge: true,
+          verification: true,
         },
         orderBy: { elapsedMs: 'asc' },
         take: 50,

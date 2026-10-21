@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { useVerificationUpdates } from '@/lib/verification/sse-hook';
 
@@ -14,8 +15,8 @@ export function SubmitRunForm({
   const [submittedUrl, setSubmittedUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
+  const router = useRouter();
 
   const { runStatus, loading: verificationLoading, error: verificationError } =
     useVerificationUpdates(runId);
@@ -23,7 +24,6 @@ export function SubmitRunForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
-    setSubmitSuccess(false);
     setIsSubmitting(true);
     setRunId(null);
 
@@ -56,7 +56,7 @@ export function SubmitRunForm({
         throw new Error('Failed to start verification');
       }
 
-      setSubmitSuccess(true);
+      router.push(`/runs/${runData.id}/result`);
       setSubmittedUrl('');
     } catch (error) {
       console.error('Error submitting run:', error);
@@ -81,12 +81,6 @@ export function SubmitRunForm({
       {submitError && (
         <div className='mb-4 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-md'>
           {submitError}
-        </div>
-      )}
-
-      {submitSuccess && runId && (
-        <div className='mb-4 bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 px-4 py-3 rounded-md'>
-          Submission successful! Verification is in progress.
         </div>
       )}
 
