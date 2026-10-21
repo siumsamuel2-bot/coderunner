@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma-node";
 
 async function main() {
   const tables = await prisma.$queryRawUnsafe<{ tablename: string }[]>(
-    "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename"
+    "SELECT tablename::text AS tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename"
   );
   console.log("Tables:", tables.map((t: { tablename: string }) => t.tablename).join(", "));
   const challenges = await prisma.challenge.count();
