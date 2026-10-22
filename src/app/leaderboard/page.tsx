@@ -12,8 +12,18 @@ export const metadata: Metadata = {
     'Global speedrun leaderboard - fastest verified AI app-building times across all challenges.',
 };
 
+type LeaderboardRun = Awaited<ReturnType<typeof serverTrpc.runs.getLeaderboard>>[number];
+
 export default async function LeaderboardPage() {
-  const topRuns = await serverTrpc.runs.getLeaderboard();
+  let topRuns: LeaderboardRun[] = [];
+  let loadError: string | null = null;
+
+  try {
+    topRuns = await serverTrpc.runs.getLeaderboard();
+  } catch {
+    loadError =
+      'Failed to load the leaderboard. Please check your connection and retry.';
+  }
 
   // Group verified runs by challenge for separate leaderboards
   const runsByChallenge: Record<string, typeof topRuns> = {};
@@ -34,6 +44,19 @@ export default async function LeaderboardPage() {
         <p className='mb-12 text-center text-gray-600 dark:text-gray-400 max-w-4xl mx-auto'>
           Fastest verified times for each challenge
         </p>
+
+        {loadError && (
+          <div className='mb-8 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-md flex items-center gap-2 text-sm'>
+            <span className='font-medium'>Unable to load leaderboard</span>
+            <span>{loadError}</span>
+            <Link
+              href='/leaderboard'
+              className='ml-auto text-indigo-600 dark:text-indigo-400 font-medium hover:underline'
+            >
+              Retry
+            </Link>
+          </div>
+        )}
 
         <div className='mb-8'>
           <div className='flex flex-wrap -mb-px'>
