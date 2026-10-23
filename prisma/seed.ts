@@ -12,6 +12,8 @@ const challenges = [
       "Build a working calculator app with +, -, *, /, clear, and decimal support.",
     difficulty: "easy",
     estimatedMinutes: 15,
+    category: "Utility",
+    language: "JavaScript",
     testSpec: {
       checks: [
         { id: "renders", type: "dom", target: "calculator-root" },
@@ -33,6 +35,8 @@ const challenges = [
       "Build a todo app with user login and full create/read/update/delete of todos.",
     difficulty: "medium",
     estimatedMinutes: 30,
+    category: "Fullstack",
+    language: "TypeScript",
     testSpec: {
       checks: [
         { id: "login", type: "auth", flow: "login", expected: "session" },
@@ -53,6 +57,8 @@ const challenges = [
       "Build a tool that accepts a PDF and extracts text and metadata.",
     difficulty: "hard",
     estimatedMinutes: 45,
+    category: "Media",
+    language: "JavaScript",
     testSpec: {
       checks: [
         { id: "upload", type: "interaction", target: "pdf-upload" },
@@ -71,6 +77,8 @@ const challenges = [
       "Build a marketing landing page with hero, features, CTA, and pricing section.",
     difficulty: "medium",
     estimatedMinutes: 25,
+    category: "Frontend",
+    language: "JavaScript",
     testSpec: {
       checks: [
         { id: "hero", type: "dom", target: "hero" },
@@ -90,6 +98,8 @@ const challenges = [
       "Build a simple chatbot UI that responds to user messages.",
     difficulty: "easy",
     estimatedMinutes: 20,
+    category: "AI",
+    language: "JavaScript",
     testSpec: {
       checks: [
         { id: "input", type: "dom", target: "chat-input" },

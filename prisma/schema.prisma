@@ -65,6 +65,8 @@ model Challenge {
   description        String
   difficulty         String
   estimatedMinutes   Int
+  category           String   @default("General")
+  language           String   @default("JavaScript")
   testSpec           Json
   acceptanceCriteria String
   createdAt          DateTime @default(now())
