@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 import { serverTrpc } from '@/utils/trpc';
+import { auth } from '@/auth';
 import { LeaderboardTable } from './LeaderboardTable';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,9 @@ export const metadata: Metadata = {
 type LeaderboardRun = Awaited<ReturnType<typeof serverTrpc.runs.getLeaderboard>>[number];
 
 export default async function LeaderboardPage() {
+  const session = await auth();
+  const currentUserId = session?.user?.id ?? null;
+
   let topRuns: LeaderboardRun[] = [];
   let loadError: string | null = null;
 
@@ -85,7 +89,10 @@ export default async function LeaderboardPage() {
             </h2>
 
             <div className='overflow-x-auto'>
-              <LeaderboardTable runs={runsByChallenge[slug]} />
+              <LeaderboardTable
+                runs={runsByChallenge[slug]}
+                currentUserId={currentUserId}
+              />
             </div>
           </div>
         ))}

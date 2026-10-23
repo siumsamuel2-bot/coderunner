@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 type LeaderboardRun = {
   id: string;
@@ -17,6 +17,28 @@ type LeaderboardRun = {
   promptChain: unknown | null;
   toolLog: unknown | null;
 };
+
+type Medal = 'gold' | 'silver' | 'bronze';
+
+function medalForRank(rank: number): Medal | null {
+  if (rank === 1) return 'gold';
+  if (rank === 2) return 'silver';
+  if (rank === 3) return 'bronze';
+  return null;
+}
+
+function medalLabel(rank: number) {
+  switch (rank) {
+    case 1:
+      return '1st';
+    case 2:
+      return '2nd';
+    case 3:
+      return '3rd';
+    default:
+      return String(rank);
+  }
+}
 
 function verificationBadge(run: LeaderboardRun) {
   const v = run.verification;
@@ -37,8 +59,16 @@ function parseTestOutput(testOutput: string | null) {
   }
 }
 
-export function LeaderboardTable({ runs }: { runs: LeaderboardRun[] }) {
+export function LeaderboardTable({ runs, currentUserId }: { runs: LeaderboardRun[]; currentUserId: string | null }) {
   const [openRunId, setOpenRunId] = useState<string | null>(null);
+
+  const userBestMs = useMemo(() => {
+    if (!currentUserId) return null;
+    const times = runs
+      .filter((r) => r.user?.id === currentUserId && r.elapsedMs !== null)
+      .map((r) => r.elapsedMs as number);
+    return times.length > 0 ? Math.min(...times) : null;
+  }, [runs, currentUserId]);
 
   return (
     <>
@@ -55,6 +85,9 @@ export function LeaderboardTable({ runs }: { runs: LeaderboardRun[] }) {
               Time
             </th>
             <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+              Challenge
+            </th>
+            <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
               Submitted
             </th>
             <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
@@ -67,14 +100,47 @@ export function LeaderboardTable({ runs }: { runs: LeaderboardRun[] }) {
         </thead>
         <tbody className='bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700'>
           {runs.map((run, idx) => {
+            const rank = idx + 1;
+            const medal = medalForRank(rank);
             const badge = verificationBadge(run);
+            const isCurrentUser = !!currentUserId && run.user?.id === currentUserId;
+            const isPersonalBest =
+              isCurrentUser &&
+              run.elapsedMs !== null &&
+              userBestMs !== null &&
+              run.elapsedMs === userBestMs;
+            const rowClass = [
+              'group',
+              idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-700' : '',
+              isCurrentUser
+                ? 'ring-2 ring-indigo-500/20 dark:ring-indigo-900/20 border border-indigo-500/30 dark:border-indigo-900/30'
+                : '',
+              medal ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
+
             return (
               <tr
                 key={run.id}
-                className={idx % 2 === 1 ? 'bg-gray-50 dark:bg-gray-700' : ''}
+                className={rowClass}
               >
-                <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
-                  {idx + 1}
+                <td className='px-6 py-4 whitespace-nowrap text-sm font-medium'>
+                  {medal ? (
+                    <span
+                      className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold shadow-sm ${
+                        medal === 'gold'
+                          ? 'bg-yellow-300 text-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-300'
+                          : medal === 'silver'
+                            ? 'bg-gray-300 text-gray-900 dark:bg-gray-700/20 dark:text-gray-300'
+                            : 'bg-orange-300 text-orange-900 dark:bg-orange-900/20 dark:text-orange-300'
+                      }`}
+                    >
+                      {medalLabel(rank)}
+                    </span>
+                  ) : (
+                    <span className='text-gray-500 dark:text-gray-400'>{rank}</span>
+                  )}
                 </td>
                 <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100'>
                   <span className='flex items-center space-x-3'>
@@ -90,13 +156,28 @@ export function LeaderboardTable({ runs }: { runs: LeaderboardRun[] }) {
                         {run.user?.name?.[0]?.toUpperCase()}
                       </span>
                     )}
-                    <span>{run.user?.name || 'Anonymous'}</span>
+                    <span className={isCurrentUser ? 'font-semibold text-indigo-600 dark:text-indigo-400' : ''}>
+                      {run.user?.name || 'Anonymous'}
+                    </span>
+                    {isCurrentUser && (
+                      <span className='inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-900/20 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter'>
+                        You
+                      </span>
+                    )}
                   </span>
                 </td>
-                <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
+                <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 font-mono'>
                   {run.elapsedMs !== null
                     ? `${(run.elapsedMs / 1000).toFixed(2)}s`
                     : 'N/A'}
+                  {isPersonalBest && (
+                    <span className='ml-1 inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-900/20 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter'>
+                      PB
+                    </span>
+                  )}
+                </td>
+                <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 truncate max-w-[140px]'>
+                  {run.challenge.title}
                 </td>
                 <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400'>
                   {run.endedAt
