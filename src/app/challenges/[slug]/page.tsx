@@ -11,6 +11,16 @@ export const dynamic = 'force-dynamic';
 
 type JourneyStep = 'Entry' | 'Submit' | 'Verify' | 'Rank';
 
+type TestSpecCheck = {
+  id: string;
+  type: string;
+  [key: string]: unknown;
+};
+
+type TestSpec = {
+  checks?: TestSpecCheck[];
+};
+
 function difficultyColor(difficulty: string) {
   switch (difficulty.toLowerCase()) {
     case 'easy':
@@ -22,6 +32,13 @@ function difficultyColor(difficulty: string) {
     default:
       return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
   }
+}
+
+function parseRequirements(acceptanceCriteria: string): string[] {
+  return acceptanceCriteria
+    .split(/(?:\.|,|;)\s*/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }
 
 export default async function ChallengeDetailPage({
@@ -102,6 +119,9 @@ export default async function ChallengeDetailPage({
     ).toISOString();
   }
 
+  const testSpec: TestSpec | null = (challenge as unknown as { testSpec?: TestSpec }).testSpec ?? null;
+  const requirements = parseRequirements(challenge.acceptanceCriteria);
+
   const steps: JourneyStep[] = ['Entry', 'Submit', 'Verify', 'Rank'];
 
   return (
@@ -139,9 +159,16 @@ export default async function ChallengeDetailPage({
         <h1 className='mb-2 text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight'>
           {challenge.title}
         </h1>
-        <p className='mb-10 text-lg text-gray-600 dark:text-gray-400 leading-relaxed'>
-          {challenge.description}
-        </p>
+
+        {/* What you\'ll build */}
+        <section className='mb-10'>
+          <h2 className='mb-3 text-xl font-semibold text-gray-900 dark:text-gray-100'>
+            What you&#39;ll build
+          </h2>
+          <p className='text-lg text-gray-600 dark:text-gray-400 leading-relaxed'>
+            {challenge.description}
+          </p>
+        </section>
 
         <div className='bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden'>
           {/* Challenge info card */}
@@ -173,7 +200,7 @@ export default async function ChallengeDetailPage({
               </div>
               <div>
                 <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
-                  Estimated Time
+                  Time Limit
                 </p>
                 <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
                   {challenge.estimatedMinutes} minutes
@@ -182,13 +209,61 @@ export default async function ChallengeDetailPage({
             </div>
           </div>
 
-          {/* Acceptance criteria */}
-          <div className='p-6'>
-            <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3'>
-              Acceptance Criteria
-            </p>
-            <p className='text-base text-gray-700 dark:text-gray-300 leading-relaxed'>
-              {challenge.acceptanceCriteria}
+          {/* Requirements checklist */}
+          <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
+            <div className='flex items-center justify-between mb-4'>
+              <h2 className='text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider'>
+                Requirements
+              </h2>
+              <span className='text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded'>
+                {requirements.length} criteria
+              </span>
+            </div>
+            <ul className='space-y-3'>
+              {requirements.map((req, i) => (
+                <li key={i} className='flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
+                  <span className='mt-0.5 shrink-0 text-gray-400 dark:text-gray-500'>
+                    ❐
+                  </span>
+                  <span>{req}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Examples */}
+          {testSpec?.checks?.length && (
+            <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
+              <h2 className='mb-4 text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider'>
+                Examples
+              </h2>
+              <p className='mb-3 text-sm text-gray-600 dark:text-gray-400'>
+                Automated test cases your solution will be checked against:
+              </p>
+              <ul className='space-y-2 text-sm'>
+                {testSpec.checks.map((check) => (
+                  <li key={check.id} className='flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700/50'>
+                    <span className='mt-0.5 shrink-0 text-xs font-mono font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded'>
+                      {check.id}
+                    </span>
+                    <span className='text-gray-700 dark:text-gray-300 leading-relaxed'>
+                      {check.type.charAt(0).toUpperCase() + check.type.slice(1)} test
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Evaluation */}
+          <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
+            <h2 className='mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider'>
+              Evaluation
+            </h2>
+            <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
+              Your submission is verified automatically against the test cases above.
+              A run is marked <strong className='text-gray-900 dark:text-gray-100'>verified</strong> only when all checks pass.
+              Verified runs are ranked by completion time on the challenge leaderboard.
             </p>
           </div>
 
@@ -279,15 +354,15 @@ export default async function ChallengeDetailPage({
             <h2 className='mb-2 text-xl font-semibold text-gray-900 dark:text-gray-100'>
               You haven&apos;t started this challenge yet.
             </h2>
-            <p className='mb-6 text-gray-600 dark:text-gray-400 text-sm leading-relaxed max-w-sm mx-auto'>
+            <p className='mb-8 text-gray-600 dark:text-gray-400 text-sm leading-relaxed max-w-sm mx-auto'>
               Start your solution to begin the timer. Your run is saved
               server-side, so you can leave and come back later.
             </p>
             <Link
               href='#submit-run'
-              className='inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-solid border-indigo-600 px-5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors'
+              className='inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-solid border-indigo-600 px-6 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors'
             >
-              Start your solution
+              Start Challenge
               <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M13 7l5 5m0 0l-5 5m5-5H6' />
               </svg>
