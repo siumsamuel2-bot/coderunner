@@ -11,6 +11,19 @@ export const dynamic = 'force-dynamic';
 
 type JourneyStep = 'Entry' | 'Submit' | 'Verify' | 'Rank';
 
+function difficultyColor(difficulty: string) {
+  switch (difficulty.toLowerCase()) {
+    case 'easy':
+      return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400';
+    case 'hard':
+      return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400';
+    default:
+      return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+  }
+}
+
 export default async function ChallengeDetailPage({
   params,
 }: {
@@ -94,150 +107,196 @@ export default async function ChallengeDetailPage({
   return (
     <div className='min-h-screen bg-zinc-50 dark:bg-black py-12'>
       <div className='max-w-4xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex items-center justify-between mb-8'>
+        {/* Header */}
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10'>
           <Link
             href='/challenges'
-            className='flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-500 dark:hover:text-gray-300'
+            className='inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors'
           >
             <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
               <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M10 19l-7-7m0 0l7-7m-7 7h18' />
             </svg>
             <span>Back to challenges</span>
           </Link>
-          <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
-            {challenge.title}
-          </h1>
+          <div className='flex items-center gap-3 flex-wrap'>
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${difficultyColor(challenge.difficulty)}`}
+            >
+              {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
+            </span>
+            <span className='px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'>
+              {challenge.category}
+            </span>
+            <span className='px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'>
+              {challenge.language}
+            </span>
+            <span className='px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'>
+              {challenge.estimatedMinutes} min
+            </span>
+          </div>
         </div>
 
-        <div className='bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-8'>
-          <p className='text-gray-700 dark:text-gray-300 mb-4'>
-            {challenge.description}
-          </p>
-          <div className='grid gap-4 sm:grid-cols-2'>
-            <div>
-              <p className='text-sm font-medium text-gray-500 dark:text-gray-400 mb-1'>
-                Difficulty
-              </p>
-              <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-                {challenge.difficulty
-                  ?.charAt(0)
-                  .toUpperCase() + challenge.difficulty.slice(1)}
-              </p>
-            </div>
-            <div>
-              <p className='text-sm font-medium text-gray-500 dark:text-gray-400 mb-1'>
-                Estimated Time
-              </p>
-              <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-                {challenge.estimatedMinutes} minutes
-              </p>
+        <h1 className='mb-2 text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight'>
+          {challenge.title}
+        </h1>
+        <p className='mb-10 text-lg text-gray-600 dark:text-gray-400 leading-relaxed'>
+          {challenge.description}
+        </p>
+
+        <div className='bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden'>
+          {/* Challenge info card */}
+          <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
+            <div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-4'>
+              <div>
+                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
+                  Difficulty
+                </p>
+                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
+                  {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
+                </p>
+              </div>
+              <div>
+                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
+                  Category
+                </p>
+                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
+                  {challenge.category}
+                </p>
+              </div>
+              <div>
+                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
+                  Language
+                </p>
+                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
+                  {challenge.language}
+                </p>
+              </div>
+              <div>
+                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
+                  Estimated Time
+                </p>
+                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
+                  {challenge.estimatedMinutes} minutes
+                </p>
+              </div>
             </div>
           </div>
-          <div className='mt-6 pt-4 border-t border-gray-200 dark:border-gray-700'>
-            <p className='text-sm font-medium text-gray-500 dark:text-gray-400 mb-2'>
+
+          {/* Acceptance criteria */}
+          <div className='p-6'>
+            <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3'>
               Acceptance Criteria
             </p>
-            <p className='text-gray-700 dark:text-gray-300'>
+            <p className='text-base text-gray-700 dark:text-gray-300 leading-relaxed'>
               {challenge.acceptanceCriteria}
             </p>
           </div>
 
           {/* Journey indicator */}
-          <div className='mt-6'>
-            <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-3 tracking-wider'>
-              Journey
-            </p>
-            <div className='flex items-center gap-2'>
-              {steps.map((step, i) => {
-                const completed = journeyCompleted.includes(step);
-                const active = journeyActive === step;
-                return (
-                  <div
-                    key={step}
-                    className='flex items-center gap-2'
-                  >
-                    {i > 0 && (
-                      <span className='w-px h-2 bg-gray-200 dark:bg-gray-700 flex-shrink-0' />
-                    )}
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
+          <div className='p-6 border-t border-gray-200 dark:border-gray-700'>
+            <div className='flex items-center gap-4 mb-4'>
+              <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider shrink-0'>
+                Journey
+              </p>
+              <div className='flex-1 flex items-center gap-2'>
+                {steps.map((step, i) => {
+                  const completed = journeyCompleted.includes(step);
+                  const active = journeyActive === step;
+                  return (
+                    <div key={step} className='flex items-center gap-2'>
+                      {i > 0 && (
+                        <div className='w-px h-2 bg-gray-200 dark:bg-gray-700 shrink-0' />
+                      )}
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
+                          completed
+                            ? 'bg-green-600 text-white'
+                            : active
+                              ? 'bg-indigo-600 text-white ring-2 ring-indigo-600/20'
+                              : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                        }`}
+                      >
+                        {completed ? '✓' : String(i + 1)}
+                      </div>
+                      <span className={`text-xs font-medium ${
                         completed
-                          ? 'bg-green-600 text-white'
+                          ? 'text-green-600 dark:text-green-400'
                           : active
-                            ? 'bg-indigo-600 text-white ring-2 ring-indigo-600/20'
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                      }`}
-                    >
-                      {completed ? '✓' : String(i + 1)}
+                            ? 'text-indigo-600 dark:text-indigo-400'
+                            : 'text-gray-400 dark:text-gray-500'
+                      }`}>
+                        {step}
+                      </span>
                     </div>
-                    <span className={`text-xs font-medium ${
-                      completed
-                        ? 'text-green-600 dark:text-green-400'
-                        : active
-                          ? 'text-indigo-600 dark:text-indigo-400'
-                          : 'text-gray-400 dark:text-gray-500'
-                    }`}>
-                      {step}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
+
+            {/* Timer / attempts / persist note */}
+            {run && inProgress && deadline && (
+              <div className='mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
+                <ChallengeTimer deadline={deadline} />
+                {attemptsRemaining != null && (
+                  <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
+                    Attempt{' '}
+                    {job ? job.attempts : 0} of {job ? job.maxAttempts : 0}{' '}
+                    ({attemptsRemaining} remaining)
+                  </span>
+                )}
+              </div>
+            )}
+            {run && inProgress && deadline && (
+              <p className='mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed'>
+                Your run is saved server-side — leave this page and come back
+                later; progress persists.
+              </p>
+            )}
           </div>
-
-          {/* Timer / attempts / server-persist note */}
-          {run && inProgress && (
-            <div className='mt-6 flex flex-col sm:flex-row sm:items-center gap-4'>
-              <ChallengeTimer deadline={deadline} />
-              {attemptsRemaining != null && (
-                <span className='text-sm text-gray-600 dark:text-gray-400'>
-                  Attempt{' '}
-                  {job ? job.attempts : 0} of {job ? job.maxAttempts : 0}{' '}
-                  ({attemptsRemaining} remaining)
-                </span>
-              )}
-            </div>
-          )}
-
-          {run && inProgress && (
-            <p className='mt-3 text-sm text-gray-500 dark:text-gray-400'>
-              Your run is saved server-side — you can leave this page and come
-              back later; progress persists.
-            </p>
-          )}
 
           {/* Error state */}
           {run?.status === 'failed' && run.verification && (
-            <div className='mt-6 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-md'>
-              <p className='text-sm font-medium'>Verification failed</p>
-              <p className='mt-1 text-sm'>{run.verification.testOutput || 'No reason provided.'}</p>
-              <p className='mt-2 text-xs text-gray-500 dark:text-gray-400'>
+            <div className='p-6 border-t border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'>
+              <p className='text-sm font-medium text-red-600 dark:text-red-400 mb-1'>
+                Verification failed
+              </p>
+              <p className='text-sm text-gray-700 dark:text-gray-300 mb-3'>
+                {run.verification.testOutput || 'No reason provided.'}
+              </p>
+              <p className='text-xs text-gray-500 dark:text-gray-400'>
                 Edit your solution and resubmit using the form below.
-              </p>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!run && (
-            <div className='mt-8 text-center py-12'>
-              <p className='text-gray-600 dark:text-gray-400 text-lg mb-4'>
-                You have not started this challenge yet.
-              </p>
-              <Link
-                href='#submit-run'
-                className='px-6 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700'
-              >
-                Start your solution
-              </Link>
-              <p className='mt-4 text-xs text-gray-500 dark:text-gray-400'>
-                Your run is saved server-side, so you can leave and come back
-                later.
               </p>
             </div>
           )}
         </div>
 
-        <div id='submit-run' className='mt-8'>
+        {/* Empty state */}
+        {!run && (
+          <div className='mt-10 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-10 text-center'>
+            <svg className='mx-auto mb-6 h-12 w-12 text-gray-400 dark:text-gray-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.5' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' />
+            </svg>
+            <h2 className='mb-2 text-xl font-semibold text-gray-900 dark:text-gray-100'>
+              You haven&apos;t started this challenge yet.
+            </h2>
+            <p className='mb-6 text-gray-600 dark:text-gray-400 text-sm leading-relaxed max-w-sm mx-auto'>
+              Start your solution to begin the timer. Your run is saved
+              server-side, so you can leave and come back later.
+            </p>
+            <Link
+              href='#submit-run'
+              className='inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-solid border-indigo-600 px-5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors'
+            >
+              Start your solution
+              <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M13 7l5 5m0 0l-5 5m5-5H6' />
+              </svg>
+            </Link>
+          </div>
+        )}
+
+        {/* Submission form */}
+        <div id='submit-run' className='mt-10'>
           <SubmitRunForm
             challengeId={challenge.id}
             userId={userId}
