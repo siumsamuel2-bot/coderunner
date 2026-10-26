@@ -72,7 +72,8 @@ export function LeaderboardTable({ runs, currentUserId }: { runs: LeaderboardRun
 
   return (
     <>
-      <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
+      <div className='overflow-x-auto'>
+        <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700 sm:min-w-[700px]'>
         <thead className='bg-gray-50 dark:bg-gray-800'>
           <tr>
             <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
@@ -204,6 +205,7 @@ export function LeaderboardTable({ runs, currentUserId }: { runs: LeaderboardRun
           })}
         </tbody>
       </table>
+      </div>
 
       {openRunId && (
         <EvidenceDialog run={runs.find((r) => r.id === openRunId)!} onClose={() => setOpenRunId(null)} />

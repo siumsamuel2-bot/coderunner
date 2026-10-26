@@ -114,7 +114,7 @@ export function ChallengesList({
           </button>
         </div>
       ) : (
-        <div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-3'>
+        <div className='grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'>
           {filtered.map((challenge) => (
             <ChallengeCard key={challenge.slug} {...challenge} />
           ))}
@@ -122,11 +122,11 @@ export function ChallengesList({
       )}
 
       {filtered.length > 0 && (
-        <div className='mt-10 flex flex-wrap gap-3 items-center'>
-          <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+        <div className='mt-10 flex flex-wrap gap-3 items-center overflow-x-auto pb-2 no-scrollbar'>
+          <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider shrink-0 whitespace-nowrap'>
             Filters
           </span>
-          <div className='relative'>
+          <div className='relative shrink-0'>
             <input
               type='text'
               placeholder='Search challenges…'
@@ -134,7 +134,7 @@ export function ChallengesList({
               onChange={(e) =>
                 setFilter((prev) => ({ ...prev, search: e.target.value }))
               }
-              className='text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 outline-none w-48'
+              className='text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 outline-none w-48 md:w-64'
             />
           </div>
           {filterBadge('Language', filter.language, languages)}
