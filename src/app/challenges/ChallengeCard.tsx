@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 
+import { Badge } from '@/components/ui/badge';
+
 type ChallengeCardProps = {
   slug: string;
   title: string;
@@ -17,19 +19,6 @@ type ChallengeCardProps = {
 function formatTime(elapsedMs: number | null) {
   if (elapsedMs === null) return '—';
   return `${(elapsedMs / 1000).toFixed(2)}s`;
-}
-
-function difficultyColor(difficulty: string) {
-  switch (difficulty.toLowerCase()) {
-    case 'easy':
-      return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400';
-    case 'medium':
-      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400';
-    case 'hard':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400';
-    default:
-      return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
-  }
 }
 
 export function ChallengeCard({
@@ -53,31 +42,15 @@ export function ChallengeCard({
           <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors'>
             {title}
           </h3>
-          <span
-            className={`px-2 py-0.5 rounded-full text-xs font-medium ${difficultyColor(difficulty)}`}
-          >
-            {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-          </span>
+          <Badge variant='difficulty' value={difficulty} />
         </div>
         <p className='mb-4 text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed'>
           {description}
         </p>
         <div className='flex flex-wrap gap-2 mb-5'>
-          <span
-            className='px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-          >
-            {category}
-          </span>
-          <span
-            className='px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-          >
-            {language}
-          </span>
-          <span
-            className='px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-          >
-            {estimatedMinutes} min
-          </span>
+          <Badge variant='category' value={category} />
+          <Badge variant='language' value={language} />
+          <Badge variant='time' value={`${estimatedMinutes} min`} />
         </div>
         <div className='grid grid-cols-2 gap-3 mb-6'>
           <div className='bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3'>

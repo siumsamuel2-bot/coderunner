@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import { Badge } from '@/components/ui/badge';
 
 import { SubmitRunForm } from './SubmitRunForm';
 import { ChallengeTimer } from './ChallengeTimer';
@@ -20,19 +21,6 @@ type TestSpecCheck = {
 type TestSpec = {
   checks?: TestSpecCheck[];
 };
-
-function difficultyColor(difficulty: string) {
-  switch (difficulty.toLowerCase()) {
-    case 'easy':
-      return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400';
-    case 'medium':
-      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400';
-    case 'hard':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400';
-    default:
-      return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
-  }
-}
 
 function parseRequirements(acceptanceCriteria: string): string[] {
   return acceptanceCriteria
@@ -139,20 +127,10 @@ export default async function ChallengeDetailPage({
             <span>Back to challenges</span>
           </Link>
           <div className='flex items-center gap-3 flex-wrap'>
-            <span
-              className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${difficultyColor(challenge.difficulty)}`}
-            >
-              {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
-            </span>
-            <span className='px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'>
-              {challenge.category}
-            </span>
-            <span className='px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'>
-              {challenge.language}
-            </span>
-            <span className='px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'>
-              {challenge.estimatedMinutes} min
-            </span>
+            <Badge variant='difficulty' value={challenge.difficulty} />
+            <Badge variant='category' value={challenge.category} />
+            <Badge variant='language' value={challenge.language} />
+            <Badge variant='time' value={`${challenge.estimatedMinutes} min`} />
           </div>
         </div>
 

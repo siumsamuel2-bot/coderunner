@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 
+import { Badge } from '@/components/ui/badge';
+
 type LeaderboardRun = {
   id: string;
   user: { id: string; name: string | null; image: string | null } | null;
@@ -40,12 +42,12 @@ function medalLabel(rank: number) {
   }
 }
 
-function verificationBadge(run: LeaderboardRun) {
+type VerificationBadge = { label: string; variant: 'category' | 'verification'; value?: string };
+
+function verificationBadge(run: LeaderboardRun): VerificationBadge {
   const v = run.verification;
-  if (!v) return { label: 'N/A', color: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' };
-  if (v.status === 'verified') return { label: 'Verified', color: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' };
-  if (v.status === 'failed') return { label: 'Failed', color: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' };
-  return { label: 'Pending', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400' };
+  if (!v) return { label: 'N/A', variant: 'category' };
+  return { label: v.status.charAt(0).toUpperCase() + v.status.slice(1), variant: 'verification', value: v.status };
 }
 
 function parseTestOutput(testOutput: string | null) {
@@ -186,11 +188,7 @@ export function LeaderboardTable({ runs, currentUserId }: { runs: LeaderboardRun
                     : '-'}
                 </td>
                 <td className='px-6 py-4 whitespace-nowrap text-sm'>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.color}`}
-                  >
-                    {badge.label}
-                  </span>
+                  <Badge variant={badge.variant} value={badge.value ?? badge.label} />
                 </td>
                 <td className='px-6 py-4 whitespace-nowrap text-sm'>
                   <button
