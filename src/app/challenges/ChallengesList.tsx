@@ -17,6 +17,7 @@ type ChallengeWithStats = {
 };
 
 type FilterState = {
+  search: string;
   language: string;
   difficulty: string;
   category: string;
@@ -29,6 +30,7 @@ export function ChallengesList({
   challenges: ChallengeWithStats[];
 }) {
   const [filter, setFilter] = useState<FilterState>({
+    search: '',
     language: 'All',
     difficulty: 'All',
     category: 'All',
@@ -52,6 +54,8 @@ export function ChallengesList({
 
   const filtered = useMemo(() => {
     return challenges.filter((c) => {
+      if (filter.search && !c.title.toLowerCase().includes(filter.search.toLowerCase()) && !c.description.toLowerCase().includes(filter.search.toLowerCase()))
+        return false;
       if (filter.language !== 'All' && c.language !== filter.language)
         return false;
       if (filter.difficulty !== 'All' && c.difficulty !== filter.difficulty)
@@ -97,6 +101,7 @@ export function ChallengesList({
           <button
             onClick={() =>
               setFilter({
+                search: '',
                 language: 'All',
                 difficulty: 'All',
                 category: 'All',
@@ -121,6 +126,17 @@ export function ChallengesList({
           <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
             Filters
           </span>
+          <div className='relative'>
+            <input
+              type='text'
+              placeholder='Search challenges…'
+              value={filter.search}
+              onChange={(e) =>
+                setFilter((prev) => ({ ...prev, search: e.target.value }))
+              }
+              className='text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 outline-none w-48'
+            />
+          </div>
           {filterBadge('Language', filter.language, languages)}
           {filterBadge('Difficulty', filter.difficulty, difficulties)}
           {filterBadge('Category', filter.category, categories)}
