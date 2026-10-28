@@ -38,6 +38,9 @@ export default async function ChallengeDetailPage({
 
   const challenge = await prisma.challenge.findUnique({
     where: { slug },
+    include: {
+      _count: { select: { runs: true } },
+    },
   });
 
   if (!challenge) {
@@ -182,6 +185,14 @@ export default async function ChallengeDetailPage({
                 </p>
                 <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
                   {challenge.estimatedMinutes} minutes
+                </p>
+              </div>
+              <div>
+                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
+                  Total Attempts
+                </p>
+                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
+                  {challenge._count.runs}
                 </p>
               </div>
             </div>

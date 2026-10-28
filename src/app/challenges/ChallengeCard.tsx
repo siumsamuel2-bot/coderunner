@@ -61,12 +61,12 @@ export function ChallengeCard({
               {attemptCount}
             </p>
           </div>
-          <div className='bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3'>
-            <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-1'>
-              Fastest verified
+          <div className='bg-indigo-50 dark:bg-indigo-900/10 rounded-lg p-3 border border-indigo-100 dark:border-indigo-800/50'>
+            <p className='text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase mb-1'>
+              Best verified time
             </p>
             <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-              {formatTime(fastestTimeMs)}
+              {fastestTimeMs === null ? '—' : formatTime(fastestTimeMs)}
             </p>
           </div>
         </div>
