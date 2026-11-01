@@ -81,6 +81,10 @@ export function SubmitRunForm({
       {submitError && (
         <div className='mb-4 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-md'>
           {submitError}
+          <p className='mt-1 text-xs text-red-500 dark:text-red-300'>
+            Check your internet connection and that your solution URL is
+            publicly accessible, then try again.
+          </p>
         </div>
       )}
 

@@ -325,7 +325,7 @@ export default async function ChallengeDetailPage({
                 Verification failed
               </p>
               <p className='text-sm text-gray-700 dark:text-gray-300 mb-3'>
-                {run.verification.testOutput || 'No reason provided.'}
+                {run.verification.testOutput || 'No specific reason was returned. Try resubmitting your solution.'}
               </p>
               <p className='text-xs text-gray-500 dark:text-gray-400'>
                 Edit your solution and resubmit using the form below.
