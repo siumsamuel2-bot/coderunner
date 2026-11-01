@@ -1,8 +1,14 @@
 import { prisma } from '@/lib/prisma-node';
+import type { PrismaClient as NodePrismaClient } from '@/generated/prisma-node/client';
 
 // DB-only verification result processing. Runs on the Node verification
 // worker (imported by runner.ts); uses the nodejs-runtime Prisma client since
 // the app's workerd client cannot load its WASM compiler under plain Node.
+
+// The two generated clients share the same schema, so the nodejs client type
+// is structurally satisfied by the app client.
+type Db = NodePrismaClient;
+const appDb = prisma as unknown as Db;
 
 export async function processVerificationResults(
   runId: string,
@@ -105,4 +111,42 @@ export async function processVerificationResults(
       console.error(`Failed to update run status to failed for run ${runId}:`, updateError);
     }
   }
+}
+
+/**
+ * Reset runs stuck in 'verifying' status older than `staleThresholdMs` back to
+ * 'submitted' so they can be re-queued for verification.
+ *
+ * Protects against a worker dying after flipping a run to 'verifying' but
+ * before reaching a terminal state, which would leave the run stuck and block
+ * the user from starting a new run (verifying is an active status).
+ *
+ * Returns the number of runs recovered.
+ */
+export async function recoverStaleRuns(
+  staleThresholdMs: number = 30 * 60 * 1000,
+  db: Db = appDb
+): Promise<number> {
+  const cutoff = new Date(Date.now() - staleThresholdMs);
+
+  const staleRuns = await db.run.findMany({
+    where: {
+      status: 'verifying',
+      updatedAt: { lt: cutoff },
+    },
+    select: { id: true },
+  });
+
+  if (staleRuns.length === 0) return 0;
+
+  await db.run.updateMany({
+    where: {
+      id: { in: staleRuns.map((r) => r.id) },
+    },
+    data: {
+      status: 'submitted',
+    },
+  });
+
+  return staleRuns.length;
 }

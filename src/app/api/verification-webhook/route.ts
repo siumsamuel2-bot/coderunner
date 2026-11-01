@@ -94,6 +94,20 @@ export async function POST(request: Request) {
       },
     });
 
+    // Mark the verification job completed so the external worker knows it's done
+    try {
+      await prisma.verificationJob.update({
+        where: { runId },
+        data: {
+          status: "completed",
+          error: null,
+        },
+      });
+    } catch {
+      // No job record (e.g. run was queued before job tracking existed) —
+      // non-fatal; the run + verification are already updated above.
+    }
+
     return NextResponse.json({ message: "Verification results processed" }, { status: 200 });
   } catch (error) {
     console.error("Error processing verification webhook:", error);

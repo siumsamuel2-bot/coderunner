@@ -107,3 +107,41 @@ export async function getVerificationQueueStats(db: Db = appDb) {
     total: pending + processing + completed + failed,
   };
 }
+
+/**
+ * Reset 'processing' verification jobs older than `staleThresholdMs` back to
+ * 'pending' so they can be retried by the next worker poll.
+ *
+ * Protects against a worker dying mid-job (after claim, before complete/fail)
+ * which would otherwise leave the job stuck in 'processing' forever.
+ *
+ * Returns the number of jobs recovered.
+ */
+export async function recoverStaleJobs(
+  staleThresholdMs: number = 30 * 60 * 1000,
+  db: Db = appDb
+): Promise<number> {
+  const cutoff = new Date(Date.now() - staleThresholdMs);
+
+  const staleJobs = await db.verificationJob.findMany({
+    where: {
+      status: 'processing',
+      updatedAt: { lt: cutoff },
+    },
+    select: { id: true },
+  });
+
+  if (staleJobs.length === 0) return 0;
+
+  await db.verificationJob.updateMany({
+    where: {
+      id: { in: staleJobs.map((j) => j.id) },
+    },
+    data: {
+      status: 'pending',
+      error: null,
+    },
+  });
+
+  return staleJobs.length;
+}

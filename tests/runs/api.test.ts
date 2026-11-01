@@ -13,9 +13,23 @@ type RunRow = {
   updatedAt: Date;
 };
 
+type JobRow = {
+  id: string;
+  runId: string;
+  challengeId: string;
+  targetUrl: string;
+  status: string;
+  attempts: number;
+  maxAttempts: number;
+  error: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 // In-memory DB backing the mocked prisma client. Declared via vi.hoisted so
 // the module factories below can close over it before test-file body runs.
 const store = vi.hoisted(() => ({ runs: [] as RunRow[] }));
+const jobStore = vi.hoisted(() => ({ jobs: [] as JobRow[] }));
 
 vi.mock('@/auth', () => ({ auth: vi.fn() }));
 
@@ -93,6 +107,16 @@ vi.mock('@/lib/prisma', () => ({
           update?: Record<string, unknown>;
           create?: Record<string, unknown>;
         }) => ({ runId: where.runId, ...(update ?? create) })
+      ),
+    },
+    verificationJob: {
+      update: vi.fn(
+        async ({ where, data }: { where: { runId: string }; data: Partial<JobRow> }) => {
+          const idx = jobStore.jobs.findIndex((j) => j.runId === where.runId);
+          if (idx === -1) throw new Error(`VerificationJob ${where.runId} not found`);
+          Object.assign(jobStore.jobs[idx], data);
+          return jobStore.jobs[idx];
+        }
       ),
     },
   },
