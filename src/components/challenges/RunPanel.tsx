@@ -30,6 +30,25 @@ const primaryButtonClass =
   'w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 dark:focus:ring-offset-black';
 
 /**
+ * Builds actionable error copy, appending the server's reason when the API
+ * returns one. Keeps failures diagnostic instead of a bare "try again".
+ */
+async function errorCopy(response: Response, guidance: string): Promise<string> {
+  try {
+    const body = await response.json();
+    const reason =
+      body && typeof body.error === 'string' && body.error.trim()
+        ? body.error.trim()
+        : body && typeof body.message === 'string' && body.message.trim()
+          ? body.message.trim()
+          : null;
+    return reason ? `${guidance} (${reason})` : guidance;
+  } catch {
+    return guidance;
+  }
+}
+
+/**
  * RunPanel (SPE-133, from the SPE-127 spec §1.2-1.3): one component owning
  * the run lifecycle states on the challenge page.
  *
@@ -123,10 +142,17 @@ export function RunPanel({
         // from the server, which resolves the run into state C/D.
         await router.refresh();
       } else {
-        throw new Error('Failed to start run');
+        setError(
+          await errorCopy(
+            response,
+            "Couldn't start your run. Check your connection, then try again."
+          )
+        );
       }
     } catch {
-      setError('Failed to start run. Please try again.');
+      setError(
+        "Couldn't start your run. Check your connection, then try again."
+      );
     } finally {
       setIsStarting(false);
     }
@@ -147,12 +173,20 @@ export function RunPanel({
       const response = await fetch(`/api/runs/${activeRun.runId}/abandon`, {
         method: 'POST',
       });
-      if (!response.ok) throw new Error('Failed to abandon run');
+      if (!response.ok) {
+        setError(
+          await errorCopy(
+            response,
+            "Couldn't abandon the run. Try again in a moment."
+          )
+        );
+        return;
+      }
       setActiveRun(null);
       // Refresh so server-rendered attempt counters reflect the abandon.
       router.refresh();
     } catch {
-      setError('Failed to abandon run. Please try again.');
+      setError("Couldn't abandon the run. Try again in a moment.");
     } finally {
       setIsAbandoning(false);
     }
@@ -179,9 +213,16 @@ export function RunPanel({
         await router.refresh();
         return;
       }
-      throw new Error('Failed to submit run');
+      setError(
+        await errorCopy(
+          response,
+          "Couldn't submit your run. Check the solution URL, then try again."
+        )
+      );
     } catch {
-      setError('Failed to submit run. Please try again.');
+      setError(
+        "Couldn't submit your run. Check the solution URL, then try again."
+      );
     } finally {
       setIsSubmitting(false);
     }

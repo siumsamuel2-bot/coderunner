@@ -9,6 +9,7 @@ import { arrayMasteryVerifier } from './challenges/array-mastery/verifier.ts';
 import { pyStringLabVerifier } from './challenges/py-string-lab/verifier.ts';
 import { pyJsonForgeVerifier } from './challenges/py-json-forge/verifier.ts';
 import { pyLinkShortenerVerifier } from './challenges/py-link-shortener/verifier.ts';
+import { bookLibraryApiVerifier } from './challenges/book-library-api/verifier.ts';
 
 /** All built-in challenge verifiers, keyed by challenge id. */
 export const CHALLENGES: Readonly<Record<ChallengeId, ChallengeVerifier>> = {
@@ -20,7 +21,8 @@ export const CHALLENGES: Readonly<Record<ChallengeId, ChallengeVerifier>> = {
   'array-mastery': arrayMasteryVerifier,
   'py-string-lab': pyStringLabVerifier,
   'py-json-forge': pyJsonForgeVerifier,
-  'py-link-shortener': pyLinkShortenerVerifier
+  'py-link-shortener': pyLinkShortenerVerifier,
+  'book-library-api': bookLibraryApiVerifier
 };
 
 export const CHALLENGE_IDS = Object.keys(CHALLENGES) as ChallengeId[];

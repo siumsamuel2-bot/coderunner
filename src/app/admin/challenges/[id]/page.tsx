@@ -17,6 +17,7 @@ const CHALLENGE_CATEGORIES = [
   'backend',
   'full-stack',
   'ai',
+  'apis',
   'data',
   'general',
 ] as const;

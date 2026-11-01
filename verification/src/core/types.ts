@@ -80,4 +80,5 @@ export type ChallengeId =
   | 'array-mastery'
   | 'py-string-lab'
   | 'py-json-forge'
-  | 'py-link-shortener';
+  | 'py-link-shortener'
+  | 'book-library-api';

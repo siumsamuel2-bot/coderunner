@@ -47,6 +47,19 @@ function RankCell({ rank }: { rank: number }) {
   return <span className='text-sm text-gray-700 dark:text-gray-300'>#{rank}</span>;
 }
 
+function RecordBadge() {
+  return (
+    <span
+      role='img'
+      aria-label='World record: fastest verified time'
+      title='World record — fastest verified time for this challenge'
+      className='inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm'
+    >
+      WR
+    </span>
+  );
+}
+
 function SubmittedCell({ endedAt }: { endedAt: Date | null }) {
   if (!endedAt) return <span>—</span>;
   const date = new Date(endedAt);
@@ -64,9 +77,10 @@ function SubmittedCell({ endedAt }: { endedAt: Date | null }) {
 /**
  * Leaderboard (SPE-135, from the SPE-127 spec §2). One rank per player
  * (best-per-user dedup, dep D2), per-challenge anchored sections, top-3
- * medal badges, current-user highlight, YourRankStrip. Only real backend
- * metrics: no score column (scoring v1, dep D3, not implemented — the
- * column is absent, not dashed).
+ * medal badges, a world-record (WR) badge on each section's fastest verified
+ * run, current-user highlight, YourRankStrip. Only real backend metrics: no
+ * score column (scoring v1, dep D3, not implemented — the column is absent,
+ * not dashed).
  */
 export default async function LeaderboardPage() {
   const [session, verifiedRuns] = await Promise.all([
@@ -252,7 +266,10 @@ export default async function LeaderboardPage() {
                             } hover:bg-gray-50 dark:hover:bg-gray-700/50`}
                           >
                             <td className='px-6 py-4 whitespace-nowrap'>
-                              <RankCell rank={idx + 1} />
+                              <span className='flex items-center gap-2'>
+                                <RankCell rank={idx + 1} />
+                                {idx === 0 && <RecordBadge />}
+                              </span>
                             </td>
                             <td className='px-6 py-4 whitespace-nowrap'>
                               <span className='flex items-center gap-2'>

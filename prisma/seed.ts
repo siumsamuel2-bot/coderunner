@@ -1,8 +1,21 @@
+import { existsSync, readFileSync } from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { Prisma, PrismaClient } from "../src/generated/prisma-node/client";
+import { parseCheckManifest } from "../src/lib/check-manifest";
 
 const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
 const prisma = new PrismaClient({ adapter: new PrismaNeon({ connectionString: url }) });
+
+/** Verification specs live beside the harness; seeded from the same source. */
+const SPECS_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "verification",
+  "specs"
+);
 
 /**
  * Challenge spec schema (SPE-108). Runtime-validated at seed time so a bad
@@ -18,6 +31,7 @@ const CATEGORIES = [
   "backend",
   "full-stack",
   "ai",
+  "apis",
   "data",
   "general",
 ] as const;
@@ -311,11 +325,62 @@ const challenges: ChallengeSpec[] = [
     acceptanceCriteria:
       "Shortening produces a working short link that HTTP-redirects (3xx) to the original URL; multiple links persist and stay listed; no console errors.",
   },
+  {
+    slug: "book-library-api",
+    title: "Book Library REST API",
+    description:
+      "Build a JSON REST API for a book library on the same origin as your app: GET /api/books lists books, POST /api/books creates one from { title, author }, GET /api/books/{id} reads one back, and DELETE /api/books/{id} removes it. A create without a title must be rejected.",
+    difficulty: "medium",
+    language: "typescript",
+    category: "apis",
+    estimatedMinutes: 30,
+    testSpec: {
+      checks: [
+        { id: "book-root-loads", type: "http", expected: "status < 400" },
+        { id: "book-list-json-array", type: "http", expected: "GET /api/books returns a JSON array" },
+        { id: "book-create", type: "http", expected: "POST /api/books returns created book with id + title" },
+        { id: "book-read-by-id", type: "http", expected: "GET /api/books/:id returns the created book" },
+        { id: "book-appears-in-list", type: "http", expected: "created book present in GET /api/books" },
+        { id: "book-delete", type: "http", expected: "DELETE then GET returns 404" },
+        { id: "book-validation", type: "edge", expected: "POST without title returns 4xx" },
+        { id: "book-json-content-type", type: "http", expected: "application/json responses (bonus)" },
+        { id: "book-distinct-ids", type: "edge", expected: "two creates yield distinct ids (bonus)" },
+        { id: "book-no-console-errors", type: "console", expected: "zero console errors (bonus)" },
+      ],
+    },
+    acceptanceCriteria:
+      "The base URL responds with HTTP < 400. GET /api/books returns a JSON array. POST /api/books with a JSON body { title, author } returns the created book with a non-empty id and the submitted title. GET /api/books/{id} returns that same book. The created book appears in GET /api/books. DELETE /api/books/{id} returns 2xx and a follow-up GET returns 404. POST /api/books without a title is rejected with a 4xx status.",
+  },
 ];
+
+/**
+ * Attaches the check manifest parsed from `verification/specs/<slug>.md` to
+ * the challenge's testSpec. This keeps the challenge page's "how you'll be
+ * verified" list in lockstep with the spec the harness enforces, without a
+ * separate sync step. A missing/empty spec leaves testSpec untouched.
+ */
+function withCheckManifest(spec: ChallengeSpec): Prisma.InputJsonValue {
+  const specFile = path.join(SPECS_DIR, `${spec.slug}.md`);
+  if (!existsSync(specFile)) {
+    return spec.testSpec;
+  }
+  const manifest = parseCheckManifest(
+    readFileSync(specFile, "utf8"),
+    `verification/specs/${spec.slug}.md`
+  );
+  if (manifest.checks.length === 0) {
+    return spec.testSpec;
+  }
+  return {
+    ...(spec.testSpec as Record<string, unknown>),
+    checkManifest: manifest,
+  } as unknown as Prisma.InputJsonValue;
+}
 
 async function main() {
   for (const challenge of challenges) {
     validateChallengeSpec(challenge);
+    const testSpec = withCheckManifest(challenge);
     await prisma.challenge.upsert({
       where: { slug: challenge.slug },
       update: {
@@ -325,10 +390,10 @@ async function main() {
         language: challenge.language,
         category: challenge.category,
         estimatedMinutes: challenge.estimatedMinutes,
-        testSpec: challenge.testSpec,
+        testSpec,
         acceptanceCriteria: challenge.acceptanceCriteria,
       },
-      create: challenge,
+      create: { ...challenge, testSpec },
     });
   }
   const count = await prisma.challenge.count();
