@@ -101,6 +101,27 @@ const challenges = [
     acceptanceCriteria:
       "Messages render in a history list, a reply appears after send, pending state shown while waiting.",
   },
+  {
+    slug: "book-library-api",
+    title: "Book library API",
+    description:
+      "Build a REST API for a book library: create, list, search, read, and delete books, with input validation and correct status codes.",
+    difficulty: "medium",
+    estimatedMinutes: 30,
+    testSpec: {
+      checks: [
+        { id: "create", type: "api", method: "POST", path: "/api/books", expected: 201 },
+        { id: "list", type: "api", method: "GET", path: "/api/books", expected: "list" },
+        { id: "search", type: "api", method: "GET", path: "/api/books?q=title", expected: "filtered-list" },
+        { id: "read", type: "api", method: "GET", path: "/api/books/:id", expected: 200 },
+        { id: "delete", type: "api", method: "DELETE", path: "/api/books/:id", expected: 200 },
+        { id: "validation", type: "api", method: "POST", path: "/api/books", input: "invalid", expected: 400 },
+        { id: "not-found", type: "api", method: "GET", path: "/api/books/:id", input: "missing", expected: 404 },
+      ],
+    },
+    acceptanceCriteria:
+      "CRUD round-trips persist, list and search return correct results, invalid bodies return 400, missing ids return 404, all responses are JSON.",
+  },
 ];
 
 async function main() {

@@ -5,6 +5,7 @@ import { todoAuthVerifier } from './challenges/todo-auth/verifier.ts';
 import { pdfAnalyzerVerifier } from './challenges/pdf-analyzer/verifier.ts';
 import { landingPageVerifier } from './challenges/landing-page/verifier.ts';
 import { chatbotVerifier } from './challenges/chatbot/verifier.ts';
+import { bookLibraryApiVerifier } from './challenges/book-library-api/verifier.ts';
 
 /** All built-in challenge verifiers, keyed by challenge id. */
 export const CHALLENGES: Readonly<Record<ChallengeId, ChallengeVerifier>> = {
@@ -12,7 +13,8 @@ export const CHALLENGES: Readonly<Record<ChallengeId, ChallengeVerifier>> = {
   'todo-auth': todoAuthVerifier,
   'pdf-analyzer': pdfAnalyzerVerifier,
   'landing-page': landingPageVerifier,
-  chatbot: chatbotVerifier
+  chatbot: chatbotVerifier,
+  'book-library-api': bookLibraryApiVerifier
 };
 
 export const CHALLENGE_IDS = Object.keys(CHALLENGES) as ChallengeId[];
