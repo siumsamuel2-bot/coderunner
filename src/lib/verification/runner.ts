@@ -76,7 +76,11 @@ export async function processVerificationJobs() {
 
   try {
     await triggerVerification({
-      challengeId: job.challengeId,
+      // The harness registry (verification/src/registry.ts) is keyed by the
+      // challenge slug ("calculator", "rust-kv-store-api", ...), not the DB
+      // cuid. Passing job.challengeId (a cuid) made every verifier lookup fail
+      // — resolve the slug via the claimed job's included challenge instead.
+      challengeId: job.challenge.slug,
       targetUrl: job.targetUrl,
       runId: job.runId,
     });

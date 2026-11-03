@@ -24,7 +24,7 @@ const SPECS_DIR = path.join(
  * `challenges` before any DB writes happen.
  */
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
-const LANGUAGES = ["typescript", "python"] as const;
+const LANGUAGES = ["typescript", "python", "rust"] as const;
 const CATEGORIES = [
   "algorithms",
   "frontend",
@@ -350,6 +350,81 @@ const challenges: ChallengeSpec[] = [
     },
     acceptanceCriteria:
       "The base URL responds with HTTP < 400. GET /api/books returns a JSON array. POST /api/books with a JSON body { title, author } returns the created book with a non-empty id and the submitted title. GET /api/books/{id} returns that same book. The created book appears in GET /api/books. DELETE /api/books/{id} returns 2xx and a follow-up GET returns 404. POST /api/books without a title is rejected with a 4xx status.",
+  },
+  {
+    slug: "rust-fizzbuzz-api",
+    title: "Rust FizzBuzz API",
+    description:
+      "Build a Rust-backed FizzBuzz JSON API: GET /api/fizzbuzz/{n} returns Fizz for multiples of 3, Buzz for multiples of 5, FizzBuzz for multiples of 15, and the number itself otherwise. Non-positive or non-integer input must be rejected.",
+    difficulty: "easy",
+    language: "rust",
+    category: "algorithms",
+    estimatedMinutes: 15,
+    testSpec: {
+      checks: [
+        { id: "fb-root-loads", type: "http", expected: "status < 400" },
+        { id: "fb-fizz", type: "http", expected: "multiples of 3 return Fizz" },
+        { id: "fb-buzz", type: "http", expected: "multiples of 5 return Buzz" },
+        { id: "fb-fizzbuzz", type: "http", expected: "multiples of 15 return FizzBuzz" },
+        { id: "fb-plain-number", type: "http", expected: "other numbers return the number as a string" },
+        { id: "fb-validation", type: "edge", expected: "0 / -3 / abc return 4xx" },
+        { id: "fb-json-content-type", type: "http", expected: "application/json responses (bonus)" },
+        { id: "fb-distinct-results", type: "edge", expected: "Fizz/Buzz/FizzBuzz are distinct (bonus)" },
+        { id: "fb-no-console-errors", type: "console", expected: "zero console errors (bonus)" },
+      ],
+    },
+    acceptanceCriteria:
+      "GET /api/fizzbuzz/{n} returns a 2xx JSON response whose result is Fizz for multiples of 3, Buzz for multiples of 5 and FizzBuzz for multiples of 15, and the number as a string otherwise. n = 0, negative or non-integer returns 4xx. The base URL responds with HTTP < 400.",
+  },
+  {
+    slug: "rust-kv-store-api",
+    title: "Rust Key-Value Store API",
+    description:
+      "Build a Rust-backed JSON key-value store: PUT /api/kv/{key} stores a value, GET reads it back, DELETE removes it, and GET /api/kv lists stored keys. Unknown keys return 404 and a put without a value is rejected.",
+    difficulty: "medium",
+    language: "rust",
+    category: "backend",
+    estimatedMinutes: 30,
+    testSpec: {
+      checks: [
+        { id: "kv-root-loads", type: "http", expected: "status < 400" },
+        { id: "kv-put-creates", type: "http", expected: "PUT stores a value and echoes it" },
+        { id: "kv-get-reads", type: "http", expected: "GET returns the stored value" },
+        { id: "kv-get-unknown-404", type: "http", expected: "unknown key returns 404" },
+        { id: "kv-list-contains", type: "http", expected: "GET /api/kv lists the stored key" },
+        { id: "kv-put-overwrites", type: "http", expected: "PUT on an existing key overwrites it" },
+        { id: "kv-delete-removes", type: "http", expected: "DELETE removes the key (404 after)" },
+        { id: "kv-validation", type: "edge", expected: "PUT without a value returns 4xx" },
+        { id: "kv-json-content-type", type: "http", expected: "application/json responses (bonus)" },
+        { id: "kv-list-excludes-deleted", type: "edge", expected: "deleted key absent from list (bonus)" },
+        { id: "kv-no-console-errors", type: "console", expected: "zero console errors (bonus)" },
+      ],
+    },
+    acceptanceCriteria:
+      "PUT /api/kv/{key} with { value } returns a 2xx JSON object echoing the value. GET /api/kv/{key} returns the stored value or 404 for an unknown key. GET /api/kv returns a JSON array listing stored keys. Re-putting a key overwrites its value. DELETE removes the key so a follow-up GET returns 404. A PUT without a value is rejected with 4xx.",
+  },
+  {
+    slug: "rust-text-stats-api",
+    title: "Rust Text Stats API",
+    description:
+      "Build a Rust-backed text statistics API: POST /api/stats with { text } returns the number of characters, words and lines in that text. Empty text reports zero words and a request without text is rejected.",
+    difficulty: "medium",
+    language: "rust",
+    category: "data",
+    estimatedMinutes: 30,
+    testSpec: {
+      checks: [
+        { id: "stats-root-loads", type: "http", expected: "status < 400" },
+        { id: "stats-post-counts", type: "http", expected: "character/word/line counts match" },
+        { id: "stats-single-word", type: "http", expected: "single word -> 1 word, 1 line" },
+        { id: "stats-empty-text", type: "edge", expected: "empty text -> 0 words or 4xx" },
+        { id: "stats-validation", type: "edge", expected: "POST without text returns 4xx" },
+        { id: "stats-json-content-type", type: "http", expected: "application/json responses (bonus)" },
+        { id: "stats-no-console-errors", type: "console", expected: "zero console errors (bonus)" },
+      ],
+    },
+    acceptanceCriteria:
+      "POST /api/stats with { text } returns a 2xx JSON object with numeric character, word and line counts for that exact text. A single word reports 1 word on 1 line. Empty text reports 0 words (or is rejected with 4xx). A request without a text field is rejected with 4xx.",
   },
 ];
 

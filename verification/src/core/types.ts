@@ -81,4 +81,7 @@ export type ChallengeId =
   | 'py-string-lab'
   | 'py-json-forge'
   | 'py-link-shortener'
-  | 'book-library-api';
+  | 'book-library-api'
+  | 'rust-fizzbuzz-api'
+  | 'rust-kv-store-api'
+  | 'rust-text-stats-api';
