@@ -151,7 +151,7 @@ describe('seed <-> harness registry parity (SPE-159)', () => {
     );
     const slugs = [...seed.matchAll(/slug:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]);
     const registered = new Set(
-      [...registry.matchAll(/'([a-z0-9-]+)':\s*[A-Za-z]/g)].map((m) => m[1])
+      [...registry.matchAll(/'?([a-z0-9-]+)'?:\s*[A-Za-z]/g)].map((m) => m[1])
     );
 
     expect(slugs.length).toBeGreaterThanOrEqual(13);
