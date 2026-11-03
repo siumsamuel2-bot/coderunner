@@ -77,7 +77,11 @@ export type ChallengeId =
   | 'pdf-analyzer'
   | 'landing-page'
   | 'chatbot'
+<<<<<<< HEAD
   | 'array-mastery'
   | 'py-string-lab'
   | 'py-json-forge'
   | 'py-link-shortener';
+=======
+  | 'book-library-api';
+>>>>>>> dfce8b7 (feat: add book-library-api challenge and verifier (SPE-158 APIs track))

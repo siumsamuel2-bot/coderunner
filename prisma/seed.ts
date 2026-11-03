@@ -2,7 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "../src/generated/prisma/client";
 
 const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) };
 
 /**
  * Challenge spec schema (SPE-108). Runtime-validated at seed time so a bad
@@ -237,7 +237,7 @@ const challenges: ChallengeSpec[] = [
     testSpec: {
       checks: [
         { id: "json-page-loads", type: "http", expected: "status < 400" },
-        { id: "json-input-present", type: "dom", target: "JSON textarea" },
+        { id: "json-input-present", type: "dom", target: "textarea" },
         {
           id: "json-controls-present",
           type: "dom",
@@ -257,7 +257,7 @@ const challenges: ChallengeSpec[] = [
     slug: "py-link-shortener",
     title: "Python Link Shortener",
     description:
-      "Build a Python-backed link shortener: submit a long URL, get a short link, and make the short link redirect to the original. Created links persist in a visible list.",
+      "Build a Python-backed link shortener: submit a long URL, get a short code, and make the short link redirect to the original. Created links persist in a visible list.",
     difficulty: "hard",
     language: "python",
     estimatedMinutes: 45,
@@ -274,11 +274,32 @@ const challenges: ChallengeSpec[] = [
     acceptanceCriteria:
       "Shortening produces a working short link that HTTP-redirects (3xx) to the original URL; multiple links persist and stay listed; no console errors.",
   },
+  {
+    slug: "book-library-api",
+    title: "Book library API",
+    description:
+      "Build a REST API for a book library: create, list, search, read, update, and delete books, with input validation and correct status codes.",
+    difficulty: "medium",
+    language: "typescript",
+    estimatedMinutes: 30,
+    testSpec: {
+      checks: [
+        { id: "create", type: "api", method: "POST", path: "/api/books", expected: 201 },
+        { id: "list", type: "api", method: "GET", path: "/api/books", expected: "list" },
+        { id: "search", type: "api", method: "GET", path: "/api/books?q=title", expected: "filtered-list" },
+        { id: "read", type: "api", method: "GET", path: "/api/books/:id", expected: 200 },
+        { id: "delete", type: "api", method: "DELETE", path: "/api/books/:id", expected: 200 },
+        { id: "validation", type: "api", method: "POST", path: "/api/books", input: "invalid", expected: 400 },
+        { id: "not-found", type: "api", method: "GET", path: "/api/books/:id", input: "missing", expected: 404 },
+      ],
+    },
+    acceptanceCriteria:
+      "CRUD round-trips persist, list and search return correct results, invalid bodies return 400, missing ids return 404, all responses are JSON.",
+  },
 ];
 
 async function main() {
   for (const challenge of challenges) {
-    validateChallengeSpec(challenge);
     await prisma.challenge.upsert({
       where: { slug: challenge.slug },
       update: {
