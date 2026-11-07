@@ -1,9 +1,8 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
-import { auth, currentUser, isAdmin } from '@/auth';
-import { SignOutButton } from '@clerk/nextjs';
+import { SignOutLink } from '@/components/SignOutLink';
+import { requireAdmin } from '@/lib/admin';
 import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
@@ -12,20 +11,8 @@ const inputClasses =
   'block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm px-3 py-2 placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200';
 void inputClasses;
 
-async function requireAdmin() {
-  const { userId } = await auth();
-  if (!userId || !(await isAdmin(userId))) {
-    redirect('/sign-in');
-  }
-}
-
 export default async function AdminPage() {
-  await requireAdmin();
-  const me = await currentUser();
-  if (!me) {
-    redirect('/sign-in');
-  }
-  const adminId = me.id;
+  const session = await requireAdmin();
 
   async function deleteChallenge(formData: FormData) {
     'use server';
@@ -39,8 +26,9 @@ export default async function AdminPage() {
 
   async function deleteUser(formData: FormData) {
     'use server';
+    const current = await requireAdmin();
     const id = formData.get('id') as string;
-    if (id && id !== adminId) {
+    if (id && id !== current.user.id) {
       await prisma.user.delete({ where: { id } });
       revalidatePath('/admin');
     }
@@ -69,27 +57,27 @@ export default async function AdminPage() {
             Admin Panel
           </h1>
           <div className='flex items-center space-x-4'>
-            {me.image ? (
+            {session.user.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={me.image}
-                alt={`${me.name ?? 'user'}'s avatar`}
+                src={session.user.image}
+                alt={`${session.user.name ?? 'user'}'s avatar`}
                 className='h-10 w-10 rounded-full'
               />
             ) : (
               <div className='h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center'>
-                {me.name?.[0]?.toUpperCase()}
+                {session.user.name?.[0]?.toUpperCase()}
               </div>
             )}
             <div className='space-y-2'>
               <p className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                {me.name}
+                {session.user.name}
               </p>
               <p className='text-xs text-gray-500 dark:text-gray-400'>
-                {me.email}
+                {session.user.email}
               </p>
             </div>
-            <SignOutButton />
+            <SignOutLink />
           </div>
         </div>
 
@@ -202,7 +190,7 @@ export default async function AdminPage() {
                             >
                               Edit
                             </Link>
-                            {user.id !== me.id && (
+                            {user.id !== session.user.id && (
                               <form action={deleteUser}>
                                 <input type='hidden' name='id' value={user.id} />
                                 <button

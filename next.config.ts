@@ -8,6 +8,10 @@ const projectDir = dirname(fileURLToPath(import.meta.url));
 const isCloudflare = process.env.CLOUDFLARE_PAGES === "1";
 
 const nextConfig: NextConfig = {
+  // Pin the output file tracing root to this project. A stray lockfile in the
+  // parent workspace otherwise makes Next nest standalone output under
+  // standalone/coderunner/, which breaks the OpenNext bundle step (SPE-123).
+  outputFileTracingRoot: projectDir,
   async redirects() {
     return [
       { source: "/login", destination: "/sign-in", permanent: true },
@@ -32,6 +36,29 @@ const nextConfig: NextConfig = {
     "playwright",
     "@aws-sdk/client-s3",
   ],
+  // Prisma's workerd-runtime client imports its query compiler as
+  // `./query_compiler_fast_bg.wasm?module` (the wrangler convention). Webpack
+  // must NOT bundle it (its async-wasm runtime reads the file from disk, which
+  // does not exist on Workers). Externalizing it keeps the import in the
+  // server output so the OpenNext esbuild step (wrangler-externals plugin)
+  // marks it external and wrangler bundles it as a native WebAssembly module.
+  webpack(config) {
+    config.externals = [
+      ...(Array.isArray(config.externals) ? config.externals : []),
+      function wasmModuleExternal(
+        ctx: { context?: string; request?: string },
+        callback: (err: unknown, result?: string) => void
+      ) {
+        const request = ctx.request ?? "";
+        if (/\.wasm(\?module)?$/.test(request) && ctx.context) {
+          const abs = resolve(ctx.context, request);
+          return callback(null, `module ${abs}`);
+        }
+        callback(null);
+      },
+    ];
+    return config;
+  },
 };
 
 // Sentry is a no-op without NEXT_PUBLIC_SENTRY_DSN (see .env.example).

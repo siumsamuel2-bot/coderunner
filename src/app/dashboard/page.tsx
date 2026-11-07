@@ -3,29 +3,20 @@ import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
-import { SignOutButton } from '@clerk/nextjs';
+import { SignOutLink } from '@/components/SignOutLink';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const { userId } = await auth();
+  const session = await auth();
 
-  if (!userId) {
-    redirect('/sign-in');
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true, name: true, email: true, image: true },
-  });
-
-  if (!user) {
-    redirect('/sign-in');
+  if (!session?.user?.id) {
+    redirect('/auth/signin');
   }
 
   const userRuns = await prisma.run.findMany({
     where: {
-      userId: user.id,
+      userId: session.user.id,
     },
     include: {
       challenge: {
@@ -53,31 +44,31 @@ export default async function DashboardPage() {
     <div className='min-h-screen bg-zinc-50 dark:bg-black py-12'>
       <div className='max-w-4xl mx-auto px-4 sm:px-6 lg:px-8'>
         <div className='flex items-center justify-between mb-8'>
-          <h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
+          <h1 className='text-3xl font-bold text-gray-900 dark:text-gray-100'>
             Dashboard
           </h1>
           <div className='flex items-center space-x-4'>
-            {user.image ? (
+            {session.user.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={user.image}
-                alt={`${user.name ?? 'user'}'s avatar`}
+                src={session.user.image}
+                alt={`${session.user.name ?? 'user'}'s avatar`}
                 className='h-10 w-10 rounded-full'
               />
             ) : (
               <div className='h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center'>
-                {user.name?.[0]?.toUpperCase()}
+                {session.user.name?.[0]?.toUpperCase()}
               </div>
             )}
             <div className='space-y-2'>
               <p className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                {user.name}
+                {session.user.name}
               </p>
               <p className='text-xs text-gray-500 dark:text-gray-400'>
-                {user.email}
+                {session.user.email}
               </p>
             </div>
-            <SignOutButton />
+            <SignOutLink />
           </div>
         </div>
 
@@ -127,12 +118,9 @@ export default async function DashboardPage() {
                           {run.challenge.title.slice(0, 1).toUpperCase()}
                         </div>
                         <div>
-                          <Link
-                            href={`/challenges/${run.challenge.slug}/results/${run.id}`}
-                            className='text-sm font-medium text-gray-900 dark:text-gray-100 hover:underline'
-                          >
+                          <p className='mb-1 text-sm font-medium text-gray-900 dark:text-gray-100'>
                             {run.challenge.title}
-                          </Link>
+                          </p>
                           <p className='text-xs text-gray-500 dark:text-gray-400'>
                             Submitted {new Date(run.createdAt).toLocaleDateString()}
                           </p>
@@ -140,7 +128,16 @@ export default async function DashboardPage() {
                       </div>
 
                       <div className='text-right space-x-3'>
-                        {run.status === 'verified' && run.elapsedMs !== null ? (
+                        {run.verification?.status === 'failed' ? (
+                          <>
+                            <p className='text-xs text-red-600 dark:text-red-400'>
+                              Failed
+                            </p>
+                            <p className='mt-1 text-xs text-red-600 dark:text-red-400'>
+                              Verification failed
+                            </p>
+                          </>
+                        ) : run.status === 'verified' && run.elapsedMs !== null ? (
                           <>
                             <p className='text-sm font-semibold text-indigo-600'>
                               {(run.elapsedMs / 1000).toFixed(2)}s
@@ -157,17 +154,19 @@ export default async function DashboardPage() {
                           <p className='text-xs text-blue-600 dark:text-blue-400'>
                             Waiting for verification
                           </p>
+                        ) : run.status === 'in_progress' ? (
+                          <p className='text-xs text-gray-600 dark:text-gray-400'>
+                            Run in progress
+                          </p>
+                        ) : run.status === 'abandoned' ? (
+                          <p className='text-xs text-gray-500 dark:text-gray-500'>
+                            Abandoned
+                          </p>
                         ) : (
                           <p className='text-xs text-red-600 dark:text-red-400'>
                             Failed
                           </p>
                         )}
-
-                        {run.verification?.status === 'failed' ? (
-                          <p className='mt-1 text-xs text-red-600 dark:text-red-400'>
-                            Verification failed
-                          </p>
-                        ) : null}
                       </div>
                     </div>
                   </div>

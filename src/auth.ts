@@ -1,60 +1,55 @@
-﻿// Clerk authentication configuration
-// Replaces NextAuth (zero-factor credentials provider) with Clerk
-// Clerk handles: sign-up, sign-in, email verification, sessions, OAuth
-// We sync Clerk users to our Prisma User table via webhook
+﻿import { auth as clerkAuth, currentUser } from '@clerk/nextjs/server';
 
-import { clerkClient, auth as clerkAuth } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from '@/lib/prisma';
 
-export { clerkClient };
+// Clerk-backed auth shim (SPE-123 migration from NextAuth). Keeps the
+// NextAuth-shaped `auth()` API so all call sites (`session.user.id`, email,
+// name, image) work unchanged. The Prisma User row is synced from Clerk via
+// the user.created/updated webhook (src/app/api/webhooks/clerk/route.ts);
+// auth() self-heals by upserting from Clerk if the webhook has not landed yet.
 
-// Re-export Clerk auth primitives so existing call sites keep working
-export const auth = clerkAuth;
+export interface AuthSession {
+  user: {
+    id: string;
+    email?: string | null;
+    name?: string | null;
+    image?: string | null;
+  };
+}
 
-// Resolve the synced Prisma user for the current Clerk session
-export async function currentUser() {
+export async function auth(): Promise<AuthSession | null> {
   const { userId } = await clerkAuth();
   if (!userId) return null;
-  return prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: { id: true, name: true, email: true, image: true, clerkId: true },
-  });
-}
 
-// Admin emails - configured in Clerk dashboard as organization admins
-// Migration from: email === 'admin@example.com' (NextAuth)
-// Now: Clerk organization membership with admin role
-export const ADMIN_EMAILS = ["admin@example.com"];
-
-// Helper to check if user is admin
-export async function isAdmin(clerkUserId: string): Promise<boolean> {
-  try {
-    const client = await clerkClient();
-    const user = await client.users.getUser(clerkUserId);
-    // Check if user has admin role in organization or is in admin emails
-    const isAdminEmail = ADMIN_EMAILS.includes(
-      user.primaryEmailAddress?.emailAddress?.toLowerCase() ?? ""
-    );
-    // Check organization memberships for admin role
-    const orgMemberships = await client.users.getOrganizationMembershipList({
-      userId: clerkUserId,
+  let user = await prisma.user.findUnique({ where: { clerkId: userId } });
+  if (!user) {
+    // Webhook not landed yet (or local dev) — sync directly from Clerk.
+    const cu = await currentUser();
+    if (!cu) return null;
+    const email = cu.primaryEmailAddress?.emailAddress?.toLowerCase() ?? null;
+    user = await prisma.user.upsert({
+      where: { clerkId: userId },
+      update: {
+        email: email ?? undefined,
+        name: cu.fullName ?? email?.split('@')[0] ?? undefined,
+        image: cu.imageUrl || undefined,
+      },
+      create: {
+        clerkId: userId,
+        email,
+        name: cu.fullName ?? email?.split('@')[0] ?? null,
+        image: cu.imageUrl || null,
+        emailVerified: email ? new Date() : null,
+      },
     });
-    const isOrgAdmin = orgMemberships.data.some(
-      (m) => m.role === "org:admin" || m.role === "org:owner"
-    );
-    return isAdminEmail || isOrgAdmin;
-  } catch {
-    return false;
   }
-}
 
-// Get user's public metadata for role/permissions
-export async function getUserPublicMetadata(clerkUserId: string) {
-  try {
-    const client = await clerkClient();
-    const user = await client.users.getUser(clerkUserId);
-    return user.publicMetadata;
-  } catch {
-    return {};
-  }
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
+    },
+  };
 }

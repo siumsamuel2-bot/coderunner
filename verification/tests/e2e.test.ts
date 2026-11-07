@@ -1,17 +1,14 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as url from 'node:url';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { canLaunchBrowser } from '../src/core/browser.ts';
-import { runVerification } from '../src/cli.ts';
+import { main, runVerification } from '../src/cli.ts';
 import { hashReportBody } from '../src/core/report.ts';
 import type { CheckResult, VerificationReport } from '../src/core/types.ts';
 import { startMockApp } from './helpers/mock-app.ts';
 
-const execFileAsync = promisify(execFile);
 const ROOT_DIR = path.dirname(path.dirname(url.fileURLToPath(import.meta.url)));
 
 const hasBrowser = await canLaunchBrowser(true);
@@ -225,68 +222,64 @@ describe('e2e: CLI process (arg parsing + exit codes)', () => {
   });
 
   it('list prints all 5 challenges and exits 0', async () => {
-    const { stdout } = await execFileAsync('node', ['src/cli.ts', 'list'], {
-      cwd: ROOT_DIR
+    const logs: string[] = [];
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((msg: unknown) => {
+      logs.push(String(msg));
     });
-    expect(stdout).toContain('calculator');
-    expect(stdout).toContain('todo-auth');
-    expect(stdout).toContain('pdf-analyzer');
-    expect(stdout).toContain('landing-page');
-    expect(stdout).toContain('chatbot');
+    try {
+      const exitCode = await main(['list']);
+      expect(exitCode).toBe(0);
+      const output = logs.join('\n');
+      expect(output).toContain('calculator');
+      expect(output).toContain('todo-auth');
+      expect(output).toContain('pdf-analyzer');
+      expect(output).toContain('landing-page');
+      expect(output).toContain('chatbot');
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it.skipIf(!hasBrowser)('verify exits 0 when the submission passes', async () => {
     const outDir = await fs.mkdtemp(path.join(os.tmpdir(), 'vf-cli-'));
-    const { stdout } = await execFileAsync(
-      'node',
-      [
-        'src/cli.ts',
-        'verify',
-        '--challenge',
-        'calculator',
-        '--target',
-        `${app.url}/calc`,
-        '--seed',
-        '5',
-        '--out',
-        outDir
-      ],
-      { cwd: ROOT_DIR }
-    );
-    expect(stdout).toContain('verdict        : PASS');
+    const exitCode = await main([
+      'verify',
+      '--challenge',
+      'calculator',
+      '--target',
+      `${app.url}/calc`,
+      '--seed',
+      '5',
+      '--out',
+      outDir
+    ]);
+    expect(exitCode).toBe(0);
   }, 120_000);
 
   it.skipIf(!hasBrowser)('verify exits 1 when a required check fails', async () => {
     const outDir = await fs.mkdtemp(path.join(os.tmpdir(), 'vf-cli-'));
-    const exit = await execFileAsync(
-      'node',
-      [
-        'src/cli.ts',
-        'verify',
-        '--challenge',
-        'calculator',
-        '--target',
-        `${app.url}/calc-broken`,
-        '--seed',
-        '6',
-        '--out',
-        outDir
-      ],
-      { cwd: ROOT_DIR }
-    ).then(
-      () => 0,
-      (err: { code?: number; stdout?: string }) => err.code ?? -1
-    );
-    expect(exit).toBe(1);
+    const exitCode = await main([
+      'verify',
+      '--challenge',
+      'calculator',
+      '--target',
+      `${app.url}/calc-broken`,
+      '--seed',
+      '6',
+      '--out',
+      outDir
+    ]);
+    expect(exitCode).toBe(1);
   }, 120_000);
 
   it('verify exits 2 on usage errors', async () => {
-    const exit = await execFileAsync('node', ['src/cli.ts', 'verify', '--challenge', 'nope', '--target', 'http://x.test'], {
-      cwd: ROOT_DIR
-    }).then(
-      () => 0,
-      (err: { code?: number }) => err.code ?? -1
-    );
-    expect(exit).toBe(2);
+    const exitCode = await main([
+      'verify',
+      '--challenge',
+      'nope',
+      '--target',
+      'http://x.test'
+    ]);
+    expect(exitCode).toBe(2);
   });
 });

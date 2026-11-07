@@ -8,7 +8,8 @@ const isPublicRoute = createRouteMatcher([
   "/leaderboard(.*)",
   "/api/health",
   "/api/cron/sweeper",
-  "/api/cron/verification-jobs",
+  "/api/cron/verify",
+  "/api/cron/verification-maintenance",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks/clerk", // Clerk webhook endpoint

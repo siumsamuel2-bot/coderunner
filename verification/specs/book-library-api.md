@@ -1,41 +1,48 @@
-# Verification spec: Book library API
+# Verification spec: Book Library REST API
 
-Challenge: "Build a REST API for a book library" (SPE-158, `apis` category, medium).
+Challenge: "Build a JSON REST API for a book library — list, create, read and delete books over HTTP" (SPE-158 / SPE-107 week-4 content drop, `apis` category).
 
 ## What "working" means
 
-A submission passes when **all required checks below pass** against the live submission URL. The harness exercises the HTTP API directly and asserts status codes and response shapes.
+A submission passes when **all required checks below pass** against the live base URL. The harness talks to the submission over HTTP (Node `fetch`) and, for the console-error bonus, loads the base URL in a real browser. No source code, framework, or internal API shape is assumed beyond the public contract below.
 
-## The contract
+## The contract (discovery rules)
 
-- The app must expose JSON endpoints under `/api/books`.
-- Create: `POST /api/books` with a valid body returns `201` and the created book (with an `id`).
-- List: `GET /api/books` returns a JSON array of books.
-- Search: `GET /api/books?q=<text>` returns only books matching the query.
-- Read: `GET /api/books/:id` returns the book, or `404` if absent.
-- Delete: `DELETE /api/books/:id` removes the book and returns `200` (or `204`).
-- Invalid create bodies return `400`.
+The submission must serve a JSON API under the **same origin** as its base URL:
+
+- **`GET /`** — the base URL must return HTTP `< 400`. A landing page, API docs page, or a JSON health payload are all acceptable; the harness does not require HTML here.
+- **`GET /api/books`** — returns `200` (or another `2xx`) with `Content-Type: application/json` and a **JSON array** (it may be empty, or pre-seeded with books).
+- **`POST /api/books`** — request body `{ "title": "...", "author": "..." }` (author optional). Returns a `2xx` **JSON object** that echoes the submitted `title` and exposes a non-empty `id` (string or number). The created book must be retrievable afterwards.
+- **`GET /api/books/{id}`** — returns a `2xx` **JSON object** whose `id` matches the requested id and whose `title` matches the created book.
+- **`DELETE /api/books/{id}`** — returns a `2xx`; a subsequent `GET /api/books/{id}` returns **`404`**.
+- **`POST /api/books` with no `title`** — returns a **`4xx`** (validation error), not a `2xx`.
+
+Paths are literal: the API lives at `/api/books` and `/api/books/{id}`. `{id}` is whatever identifier the create response returned.
 
 ## Required checks
 
 | id | passes when |
 |---|---|
-| `books-api-page-loads` | Target base URL returns HTTP < 400 |
-| `books-api-create` | `POST /api/books` with a valid body returns `201` and a body containing a new `id` |
-| `books-api-list` | `GET /api/books` returns a JSON array containing the created book |
-| `books-api-search` | `GET /api/books?q=<title>` returns only matching books |
-| `books-api-read` | `GET /api/books/:id` returns the created book with `200` |
-| `books-api-delete` | `DELETE /api/books/:id` succeeds and a subsequent `GET` returns `404` |
-| `books-api-validation` | `POST /api/books` with an invalid body returns `400` |
+| `book-root-loads` | The base URL returns HTTP < 400 |
+| `book-list-json-array` | `GET /api/books` returns a 2xx JSON array |
+| `book-create` | `POST /api/books` with a random title/author returns a 2xx JSON object echoing the title and exposing a non-empty `id` |
+| `book-read-by-id` | `GET /api/books/{id}` returns a 2xx JSON object with the same `id` and `title` |
+| `book-appears-in-list` | The created book is present in `GET /api/books` (matched by id or title) |
+| `book-delete` | `DELETE /api/books/{id}` returns 2xx and a follow-up `GET /api/books/{id}` returns 404 |
+| `book-validation` | `POST /api/books` without a `title` returns 4xx |
 
-## Bonus checks
+## Bonus checks (do not affect the verdict)
 
 | id | passes when |
 |---|---|
-| `books-api-update` | `PATCH`/`PUT /api/books/:id` updates a field and persists it |
-| `books-api-json-content-type` | Responses carry `Content-Type: application/json` |
-| `books-api-pagination` | `GET /api/books?limit=N` caps the number of returned items |
+| `book-json-content-type` | API responses are served as `application/json` |
+| `book-distinct-ids` | Creating two books yields two different ids (no fixed/hardcoded id) |
+| `book-no-console-errors` | Loading the base URL in a browser records zero `console.error` / uncaught page errors |
+
+## Result parsing
+
+Each check parses the raw JSON body with `JSON.parse`; a body that is not valid JSON fails the check. Titles are compared by exact string equality after the round trip. There is no text scraping for this challenge — the API is the surface.
 
 ## Anti-mock design
 
-The harness creates a book with a randomized title and then reads it back by `id`. A submission cannot pass without a real persistent store: the created id must be retrievable and the search must reflect the just-created record.
+Book titles and authors are randomized per run from the harness seed (e.g. `fluent otter 123`). A submission that hardcodes a fixed catalog or echoes canned values will fail `book-read-by-id`, `book-appears-in-list` and `book-distinct-ids`. Re-running with the same `--seed` reproduces any run exactly for dispute review.

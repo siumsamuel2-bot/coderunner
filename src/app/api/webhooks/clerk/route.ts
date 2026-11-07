@@ -1,158 +1,95 @@
-import { Webhook } from "svix";
-import { headers } from "next/headers";
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { Webhook } from 'svix';
+import { prisma } from '@/lib/prisma';
 
-const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
+// Clerk user sync webhook (SPE-123). Keeps the Prisma User table in step with
+// Clerk identities. Auth: svix signature via CLERK_WEBHOOK_SECRET (configured
+// in the Clerk dashboard -> Webhooks -> Signing secret).
 
-if (!WEBHOOK_SECRET) {
-  console.warn(
-    "CLERK_WEBHOOK_SECRET not configured - Clerk webhook endpoint disabled"
-  );
+interface ClerkUserEvent {
+  type: string;
+  data: {
+    id: string;
+    email_addresses?: Array<{ id: string; email_address: string }>;
+    primary_email_address_id?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    image_url?: string | null;
+  };
 }
 
 export async function POST(request: Request) {
-  try {
-    const secret = WEBHOOK_SECRET;
-    if (!secret) {
-      return NextResponse.json(
-        { error: "Webhook not configured" },
-        { status: 503 }
-      );
-    }
-
-    const payload = await request.json();
-    const headersList = await headers();
-    const svixId = headersList.get("svix-id");
-    const svixTimestamp = headersList.get("svix-timestamp");
-    const svixSignature = headersList.get("svix-signature");
-
-    if (!svixId || !svixTimestamp || !svixSignature) {
-      return NextResponse.json(
-        { error: "Missing svix headers" },
-        { status: 400 }
-      );
-    }
-
-    // Verify webhook signature
-    const wh = new Webhook(secret);
-    let evt: { type: string; data: Record<string, unknown> };
-    try {
-      evt = wh.verify(JSON.stringify(payload), {
-        "svix-id": svixId!,
-        "svix-timestamp": svixTimestamp!,
-        "svix-signature": svixSignature!,
-      }) as unknown as { type: string; data: Record<string, unknown> };
-    } catch (err) {
-      console.error("Webhook signature verification failed:", err);
-      return NextResponse.json(
-        { error: "Invalid signature" },
-        { status: 400 }
-      );
-    }
-
-    const { type, data } = evt;
-
-    switch (type) {
-      case "user.created": {
-        const clerkUser = data as {
-          id: string;
-          email_addresses: Array<{
-            email_address: string;
-            primary: boolean;
-          }>;
-          first_name: string | null;
-          last_name: string | null;
-          image_url: string | null;
-          public_metadata: Record<string, unknown>;
-        };
-
-        const primaryEmail = clerkUser.email_addresses.find((e) => e.primary);
-        if (!primaryEmail) {
-          console.error("User created without primary email:", clerkUser.id);
-          return NextResponse.json(
-            { error: "No primary email" },
-            { status: 400 }
-          );
-        }
-
-        await prisma.user.upsert({
-          where: { clerkId: clerkUser.id },
-          create: {
-            clerkId: clerkUser.id,
-            email: primaryEmail.email_address.toLowerCase(),
-            name:
-              [clerkUser.first_name, clerkUser.last_name]
-                .filter(Boolean)
-                .join(" ") || primaryEmail.email_address.split("@")[0],
-            image: clerkUser.image_url,
-            emailVerified: new Date(),
-          },
-          update: {
-            email: primaryEmail.email_address.toLowerCase(),
-            name:
-              [clerkUser.first_name, clerkUser.last_name]
-                .filter(Boolean)
-                .join(" ") || primaryEmail.email_address.split("@")[0],
-            image: clerkUser.image_url,
-          },
-        });
-        break;
-      }
-
-      case "user.updated": {
-        const clerkUser = data as {
-          id: string;
-          email_addresses: Array<{
-            email_address: string;
-            primary: boolean;
-          }>;
-          first_name: string | null;
-          last_name: string | null;
-          image_url: string | null;
-        };
-
-        const primaryEmail = clerkUser.email_addresses.find((e) => e.primary);
-        if (!primaryEmail) {
-          console.error("User updated without primary email:", clerkUser.id);
-          return NextResponse.json(
-            { error: "No primary email" },
-            { status: 400 }
-          );
-        }
-
-        await prisma.user.update({
-          where: { clerkId: clerkUser.id },
-          data: {
-            email: primaryEmail.email_address.toLowerCase(),
-            name:
-              [clerkUser.first_name, clerkUser.last_name]
-                .filter(Boolean)
-                .join(" ") || primaryEmail.email_address.split("@")[0],
-            image: clerkUser.image_url,
-          },
-        });
-        break;
-      }
-
-      case "user.deleted": {
-        const clerkUser = data as { id: string };
-        await prisma.user.delete({
-          where: { clerkId: clerkUser.id },
-        });
-        break;
-      }
-
-      default:
-        console.log(`Unhandled Clerk webhook type: ${type}`);
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("Clerk webhook error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  const secret = process.env.CLERK_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error('[clerk-webhook] CLERK_WEBHOOK_SECRET is not configured');
+    return Response.json({ error: 'Webhook not configured' }, { status: 500 });
   }
+
+  const svixId = request.headers.get('svix-id');
+  const svixTimestamp = request.headers.get('svix-timestamp');
+  const svixSignature = request.headers.get('svix-signature');
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    return Response.json({ error: 'Missing svix headers' }, { status: 400 });
+  }
+
+  const payload = await request.text();
+  const wh = new Webhook(secret);
+
+  let event: ClerkUserEvent;
+  try {
+    event = wh.verify(payload, {
+      'svix-id': svixId,
+      'svix-timestamp': svixTimestamp,
+      'svix-signature': svixSignature,
+    }) as ClerkUserEvent;
+  } catch (error) {
+    console.error('[clerk-webhook] signature verification failed:', error);
+    return Response.json({ error: 'Invalid signature' }, { status: 400 });
+  }
+
+  const { type, data } = event;
+  const email =
+    data.email_addresses?.find((e) => e.id === data.primary_email_address_id)
+      ?.email_address?.toLowerCase() ??
+    data.email_addresses?.[0]?.email_address?.toLowerCase() ??
+    null;
+  const name =
+    [data.first_name, data.last_name].filter(Boolean).join(' ') || email?.split('@')[0] || null;
+
+  try {
+    switch (type) {
+      case 'user.created':
+      case 'user.updated': {
+        await prisma.user.upsert({
+          where: { clerkId: data.id },
+          update: {
+            email,
+            name,
+            image: data.image_url || null,
+            emailVerified: email ? new Date() : null,
+          },
+          create: {
+            clerkId: data.id,
+            email,
+            name,
+            image: data.image_url || null,
+            emailVerified: email ? new Date() : null,
+          },
+        });
+        break;
+      }
+      case 'user.deleted': {
+        if (data.id) {
+          await prisma.user.deleteMany({ where: { clerkId: data.id } });
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  } catch (error) {
+    console.error(`[clerk-webhook] failed to process ${type}:`, error);
+    return Response.json({ error: 'Processing failed' }, { status: 500 });
+  }
+
+  return Response.json({ received: true }, { status: 200 });
 }

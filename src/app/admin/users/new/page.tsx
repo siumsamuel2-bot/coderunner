@@ -2,19 +2,12 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
-import { auth, isAdmin } from '@/auth';
+import { requireAdmin } from '@/lib/admin';
 
 export const dynamic = 'force-dynamic';
 
 const inputClasses =
   'block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm px-3 py-2 placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200';
-
-async function requireAdmin() {
-  const { userId } = await auth();
-  if (!userId || !(await isAdmin(userId))) {
-    redirect('/sign-in');
-  }
-}
 
 export default async function NewUserPage() {
   await requireAdmin();

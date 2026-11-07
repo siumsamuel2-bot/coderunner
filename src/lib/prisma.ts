@@ -1,20 +1,14 @@
-import { PrismaPg } from "@prisma/adapter-pg";
+
+import { PrismaNeonHttp } from "@prisma/adapter-neon";
 import { PrismaClient } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Errors worth retrying: transient connection failures from serverless
-// Postgres (Neon pooler, Railway free-tier sleeping on idle).
-// P1001/P1002 = can't reach/timed out, P1017 = server closed connection,
-// ECONNREFUSED/ECONNRESET/ETIMEDOUT = socket-level failures.
+// Errors worth retrying: transient connection failures from Neon (P1001/P1002 =
+// can't reach/timed out, ECONNREFUSED/ECONNRESET/ETIMEDOUT = socket-level
+// failures from dropped idle connections in the pool).
 const RETRYABLE_CODES = new Set(["P1001", "P1002", "P1017"]);
-const RETRYABLE_MESSAGES = [
-  "ECONNREFUSED",
-  "ECONNRESET",
-  "ETIMEDOUT",
-  "Connection terminated",
-  "server closed the connection unexpectedly",
-];
+const RETRYABLE_MESSAGES = ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "Connection terminated"];
 const MAX_ATTEMPTS = 5;
 
 function isRetryable(err: unknown): boolean {
@@ -45,29 +39,23 @@ function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 function createPrismaClient(): PrismaClient {
-  const connectionString =
-    process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-
-  // Neon pooler settings:
-  // - connectionTimeoutMillis: 120s (Neon cold start can take time)
-  // - idleTimeoutMillis: 60s (Neon pooler default)
-  // - max: 3 (conservative for serverless pooler)
-  // - keepAlive: true (maintain connections)
-  const adapter = new PrismaPg({
-    connectionString,
-    connectionTimeoutMillis: 120_000,
-    idleTimeoutMillis: 60_000,
-    max: 3,
-    keepAlive: true,
+  const connectionString = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
+  // PrismaNeonHttp uses the Neon HTTP (fetch) transport: stateless, safe for
+  // Cloudflare Workers. The WS-based PrismaNeon keeps pooled sockets alive
+  // across requests, which workerd forbids ("Cannot perform I/O on behalf of
+  // a different request" + hung requests). HTTP mode does not support
+  // transactions — the app avoids $transaction (verified SPE-123).
+  const adapter = new PrismaNeonHttp(connectionString, {
+    arrayMode: false,
+    fullResults: false,
   });
   const client = new PrismaClient({ adapter });
-
-  // Retry transient connection errors so a cold-starting pooler yields a
-  // slow response instead of a 500.
+  // Retry transient connection errors so a sleeping/waking Neon yields a slow
+  // response instead of a 500.
   return client.$extends({
     query: {
       $allModels: {
-        async $allOperations({ operation, args, query }) {
+        async $allOperations({ args, query }) {
           return withRetry(() => query(args));
         },
       },

@@ -199,7 +199,7 @@ export async function runVerification(
   return report;
 }
 
-async function main(argv: readonly string[]): Promise<number> {
+export async function main(argv: readonly string[]): Promise<number> {
   const command = argv[0];
   const rest = argv.slice(1);
 

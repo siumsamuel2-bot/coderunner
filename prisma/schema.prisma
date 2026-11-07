@@ -1,6 +1,18 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  // workerd: emits a static .wasm import (wasm-worker-loader) instead of
+  // base64-decoding + new WebAssembly.Module(), which Cloudflare Workers
+  // rejects ("Wasm code generation disallowed by embedder").
+  runtime = "workerd"
+}
+
+// Second generation for Node hosts (seed, db-check, verification worker on
+// GitHub Actions): the workerd runtime's `?module` wasm import does not
+// resolve under plain Node/tsx, so Node consumers import this client instead.
+generator clientNode {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-node"
 }
 
 datasource db {
@@ -26,6 +38,14 @@ model Challenge {
   description        String
   difficulty         String
   language           String   @default("typescript")
+  // SPE-131/SPE-126: listing metadata. category is a free-form short label
+  // (algorithms, frontend, backend, full-stack, ai, data, general); the UI
+  // reads distinct values from the DB. aiAllowed=true means AI coding
+  // assistants are permitted during the run (true for all challenges today).
+  // NOTE: no timeLimitMinutes yet — nothing enforces a hard cutoff, so the
+  // UI must present estimatedMinutes as an estimate, never a limit.
+  category           String   @default("general")
+  aiAllowed          Boolean  @default(true)
   estimatedMinutes   Int
   testSpec           Json
   acceptanceCriteria String
@@ -43,7 +63,7 @@ model Run {
   startedAt   DateTime  @default(now())
   endedAt     DateTime?
   elapsedMs   Int?
-  attempts    Int       @default(0)
+  attempt     Int       @default(1)
   promptChain Json?
   toolLog     Json?
   createdAt   DateTime  @default(now())
@@ -59,6 +79,7 @@ model Verification {
   runId      String   @unique
   status     String
   testOutput String?
+  reportData Json?
   verifiedAt DateTime @default(now())
   run        Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
 }
