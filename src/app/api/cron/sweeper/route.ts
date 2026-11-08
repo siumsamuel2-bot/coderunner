@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   PaperclipConfigError,
-  runScopeCheck,
+  checkScopeCanClearLock,
   sweepStaleLocks,
 } from "@/lib/paperclip";
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
   try {
     if (checkScope) {
-      const result = await runScopeCheck();
+      const result = await checkScopeCanClearLock();
       console.log("[sweeper] scope check:", result.detail);
       return NextResponse.json({ scopeCheck: result }, { status: 200 });
     }

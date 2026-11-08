@@ -277,6 +277,15 @@ export interface ScopeCheckResult {
  * stale candidate exists, it reports the capability as unverified rather than
  * touching a healthy lock.
  */
+export async function checkScopeCanClearLock(): Promise<{ canClear: boolean; detail: string }> {
+  const result = await runScopeCheck();
+  const canClear = result.canClearLock === true;
+  return {
+    canClear,
+    detail: result.detail,
+  };
+}
+
 export async function runScopeCheck(): Promise<ScopeCheckResult> {
   const issues = await listLockedIssues();
   const now = new Date();
