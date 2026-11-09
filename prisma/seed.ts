@@ -24,7 +24,7 @@ const SPECS_DIR = path.join(
  * `challenges` before any DB writes happen.
  */
 const DIFFICULTIES = ["easy", "medium", "hard"] as const;
-const LANGUAGES = ["typescript", "python", "rust"] as const;
+const LANGUAGES = ["typescript", "python", "rust", "sql"] as const;
 const CATEGORIES = [
   "algorithms",
   "frontend",

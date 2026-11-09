@@ -84,4 +84,6 @@ export type ChallengeId =
   | 'book-library-api'
   | 'rust-fizzbuzz-api'
   | 'rust-kv-store-api'
-  | 'rust-text-stats-api';
+  | 'rust-text-stats-api'
+  | 'sql-mini-query-api'
+  | 'sql-scores-api';

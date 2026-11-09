@@ -13,6 +13,8 @@ import { bookLibraryApiVerifier } from './challenges/book-library-api/verifier.t
 import { rustKvStoreApiVerifier } from './challenges/rust-kv-store-api/verifier.ts';
 import { rustFizzbuzzApiVerifier } from './challenges/rust-fizzbuzz-api/verifier.ts';
 import { rustTextStatsApiVerifier } from './challenges/rust-text-stats-api/verifier.ts';
+import { sqlMiniQueryApiVerifier } from './challenges/sql-mini-query-api/verifier.ts';
+import { sqlScoresApiVerifier } from './challenges/sql-scores-api/verifier.ts';
 
 /** All built-in challenge verifiers, keyed by challenge id. */
 export const CHALLENGES: Readonly<Record<ChallengeId, ChallengeVerifier>> = {
@@ -28,7 +30,9 @@ export const CHALLENGES: Readonly<Record<ChallengeId, ChallengeVerifier>> = {
   'book-library-api': bookLibraryApiVerifier,
   'rust-fizzbuzz-api': rustFizzbuzzApiVerifier,
   'rust-kv-store-api': rustKvStoreApiVerifier,
-  'rust-text-stats-api': rustTextStatsApiVerifier
+  'rust-text-stats-api': rustTextStatsApiVerifier,
+  'sql-mini-query-api': sqlMiniQueryApiVerifier,
+  'sql-scores-api': sqlScoresApiVerifier
 };
 
 export const CHALLENGE_IDS = Object.keys(CHALLENGES) as ChallengeId[];

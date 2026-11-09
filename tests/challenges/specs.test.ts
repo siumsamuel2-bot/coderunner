@@ -42,6 +42,8 @@ describe('verification specs (pipeline regression)', () => {
     expect(files).toContain('rust-fizzbuzz-api.md');
     expect(files).toContain('rust-kv-store-api.md');
     expect(files).toContain('rust-text-stats-api.md');
+    expect(files).toContain('sql-mini-query-api.md');
+    expect(files).toContain('sql-scores-api.md');
   });
 
   it.each(files)('%s parses to required checks with unique slug-style ids', (file) => {
@@ -128,6 +130,47 @@ describe('Rust track specs (SPE-159 week-5)', () => {
     expect(bonusIds('rust-text-stats-api')).toEqual([
       'stats-json-content-type',
       'stats-no-console-errors',
+    ]);
+  });
+
+  it('sql-mini-query-api carries the required and bonus checks the harness runs', () => {
+    expect(requiredIds('sql-mini-query-api')).toEqual([
+      'q-root-loads',
+      'q-ingest-accepts',
+      'q-count-all',
+      'q-count-category',
+      'q-sum-all',
+      'q-min-category',
+      'q-max-category',
+      'q-avg-category',
+      'q-validation-op',
+      'q-empty-avg-4xx',
+      'q-validation-ingest',
+    ]);
+    expect(bonusIds('sql-mini-query-api')).toEqual([
+      'q-json-content-type',
+      'q-reingest-replaces',
+      'q-no-console-errors',
+    ]);
+  });
+
+  it('sql-scores-api carries the required and bonus checks the harness runs', () => {
+    expect(requiredIds('sql-scores-api')).toEqual([
+      's-root-loads',
+      's-create-echoes',
+      's-list-contains',
+      's-player-filter',
+      's-top-k-desc',
+      's-minscore-filter',
+      's-asc-order',
+      's-delete-removes',
+      's-delete-unknown-404',
+      's-validation-limit',
+      's-validation-create',
+    ]);
+    expect(bonusIds('sql-scores-api')).toEqual([
+      's-json-content-type',
+      's-no-console-errors',
     ]);
   });
 });
