@@ -460,65 +460,6 @@ const challenges: ChallengeSpec[] = [
     slug: "sql-scores-api",
     title: "SQL Scores API",
     description:
-      "Build a scores API with SQL SELECT semantics: POST /api/scores inserts { player, score } records, GET /api/scores lists them with WHERE-style filters (player, minScore), ORDER BY (order=score, dir=asc|desc) and LIMIT, and DELETE /api/scores/{id} removes one. Invalid queries are rejected.",
-    difficulty: "medium",
-    language: "sql",
-    category: "data",
-    estimatedMinutes: 30,
-    testSpec: {
-      checks: [
-        { id: "s-root-loads", type: "http", expected: "status < 400" },
-        { id: "s-create-echoes", type: "http", expected: "POST returns id + echoes player and score" },
-        { id: "s-list-contains", type: "http", expected: "GET lists every created record" },
-        { id: "s-player-filter", type: "http", expected: "player filter returns exactly that player's records" },
-        { id: "s-top-k-desc", type: "http", expected: "order=score&dir=desc&limit=3 returns the top-3 in order" },
-        { id: "s-minscore-filter", type: "http", expected: "minScore filter returns only qualifying records" },
-        { id: "s-asc-order", type: "http", expected: "dir=asc returns ascending scores" },
-        { id: "s-delete-removes", type: "http", expected: "DELETE removes the record from the list" },
-        { id: "s-delete-unknown-404", type: "edge", expected: "DELETE of an unknown id returns 404" },
-        { id: "s-validation-limit", type: "edge", expected: "limit=0 and limit=abc return 4xx" },
-        { id: "s-validation-create", type: "edge", expected: "POST without score returns 4xx" },
-        { id: "s-json-content-type", type: "http", expected: "application/json responses (bonus)" },
-        { id: "s-no-console-errors", type: "console", expected: "zero console errors (bonus)" },
-      ],
-    },
-    acceptanceCriteria:
-      "POST /api/stats with { text } returns a 2xx JSON object with numeric character, word and line counts for that exact text. A single word reports 1 word on 1 line. Empty text reports 0 words (or is rejected with 4xx). A request without a text field is rejected with 4xx.",
-  },
-  {
-    slug: "sql-mini-query-api",
-    title: "SQL Mini Query API",
-    description:
-      "Build a SQL-style aggregation API: POST /api/ingest replaces the store with { category, value } rows, then POST /api/query runs count / sum / avg / min / max over them with an optional category filter (WHERE semantics). Unknown ops and aggregates over empty sets are rejected.",
-    difficulty: "easy",
-    language: "sql",
-    category: "data",
-    estimatedMinutes: 20,
-    testSpec: {
-      checks: [
-        { id: "q-root-loads", type: "http", expected: "status < 400" },
-        { id: "q-ingest-accepts", type: "http", expected: "ingest accepts 12 seeded rows and reports the count" },
-        { id: "q-count-all", type: "http", expected: "count over all rows matches" },
-        { id: "q-count-category", type: "http", expected: "count with a category filter matches" },
-        { id: "q-sum-all", type: "http", expected: "sum over all rows matches" },
-        { id: "q-min-category", type: "http", expected: "min with a category filter matches" },
-        { id: "q-max-category", type: "http", expected: "max with a category filter matches" },
-        { id: "q-avg-category", type: "http", expected: "avg with a category filter matches (2 decimals)" },
-        { id: "q-validation-op", type: "edge", expected: "unknown/missing op returns 4xx" },
-        { id: "q-empty-avg-4xx", type: "edge", expected: "avg over an empty category returns 4xx" },
-        { id: "q-validation-ingest", type: "edge", expected: "invalid ingest row returns 4xx" },
-        { id: "q-json-content-type", type: "http", expected: "application/json responses (bonus)" },
-        { id: "q-reingest-replaces", type: "edge", expected: "re-ingesting replaces the store (bonus)" },
-        { id: "q-no-console-errors", type: "console", expected: "zero console errors (bonus)" },
-      ],
-    },
-    acceptanceCriteria:
-      "POST /api/ingest with { rows: [{ category, value }] } replaces the store and returns { ingested: n }. POST /api/query with { op: count|sum|avg|min|max, category? } returns { result } computed over the matching rows. count/sum over an empty set return 0; avg/min/max over an empty set return 4xx. Unknown or missing op returns 4xx. Invalid ingest payloads return 4xx.",
-  },
-  {
-    slug: "sql-scores-api",
-    title: "SQL Scores API",
-    description:
       "Build a SQL-style scores API: POST /api/scores inserts { player, score } records, and GET /api/scores supports WHERE-style filters (player, minScore) plus ORDER BY (order, dir) and LIMIT. DELETE /api/scores/{id} removes a record; unknown ids return 404.",
     difficulty: "medium",
     language: "sql",
@@ -542,68 +483,8 @@ const challenges: ChallengeSpec[] = [
       ],
     },
     acceptanceCriteria:
-      "POST /api/stats with { text } returns a 2xx JSON object with numeric character, word and line counts for that exact text. A single word reports 1 word on 1 line. Empty text reports 0 words (or is rejected with 4xx). A request without a text field is rejected with 4xx.",
-  },
-  {
-    slug: "sql-mini-query-api",
-    title: "SQL Mini Query API",
-    description:
-      "Build a SQL-style aggregation API: POST /api/ingest replaces the store with { category, value } rows, then POST /api/query runs SQL-style aggregates (count, sum, avg, min, max) with an optional category WHERE filter. Invalid payloads are rejected.",
-    difficulty: "medium",
-    language: "sql",
-    category: "data",
-    estimatedMinutes: 30,
-    testSpec: {
-      checks: [
-        { id: "q-root-loads", type: "http", expected: "status < 400" },
-        { id: "q-ingest-accepts", type: "http", expected: "ingest of 12 rows reports ingested: 12" },
-        { id: "q-count-all", type: "http", expected: "count over all rows matches" },
-        { id: "q-count-category", type: "http", expected: "count with category filter matches" },
-        { id: "q-sum-all", type: "http", expected: "sum over all rows matches exactly" },
-        { id: "q-min-category", type: "http", expected: "min with category filter matches" },
-        { id: "q-max-category", type: "http", expected: "max with category filter matches" },
-        { id: "q-avg-category", type: "http", expected: "avg with category filter matches (2 decimals)" },
-        { id: "q-validation-op", type: "edge", expected: "unknown op and missing op return 4xx" },
-        { id: "q-empty-avg-4xx", type: "edge", expected: "avg over a category with no rows returns 4xx" },
-        { id: "q-validation-ingest", type: "edge", expected: "ingest with a row missing value returns 4xx" },
-        { id: "q-json-content-type", type: "http", expected: "application/json responses (bonus)" },
-        { id: "q-reingest-replaces", type: "edge", expected: "re-ingesting replaces the store (bonus)" },
-        { id: "q-no-console-errors", type: "console", expected: "zero console errors (bonus)" },
-      ],
-    },
-    acceptanceCriteria:
-      "POST /api/ingest with { rows: [{ category, value }] } replaces the store and returns { ingested: <n> }. POST /api/query with { op } runs count/sum/avg/min/max over the rows, optionally filtered by category; avg is rounded to 2 decimals. count over an empty set returns 0; avg/min/max over an empty set return 4xx. Unknown or missing op returns 4xx. Invalid ingest payloads (empty rows, missing or non-numeric value, empty category) return 4xx and leave the store intact.",
-  },
-  {
-    slug: "sql-scores-api",
-    title: "SQL Scores API",
-    description:
-      "Build a scores API with SQL SELECT semantics: POST /api/scores inserts { player, score } records, GET /api/scores lists them with WHERE-style filters (player, minScore), ORDER BY (order=score, dir=asc|desc) and LIMIT, and DELETE /api/scores/{id} removes one. Invalid queries are rejected.",
-    difficulty: "medium",
-    language: "sql",
-    category: "data",
-    estimatedMinutes: 30,
-    testSpec: {
-      checks: [
-        { id: "s-root-loads", type: "http", expected: "status < 400" },
-        { id: "s-create-echoes", type: "http", expected: "POST returns id + echoes player and score" },
-        { id: "s-list-contains", type: "http", expected: "GET lists every created record" },
-        { id: "s-player-filter", type: "http", expected: "player filter returns exactly that player's records" },
-        { id: "s-top-k-desc", type: "http", expected: "order=score&dir=desc&limit=3 returns the top-3 in order" },
-        { id: "s-minscore-filter", type: "http", expected: "minScore filter returns only qualifying records" },
-        { id: "s-asc-order", type: "http", expected: "dir=asc returns ascending scores" },
-        { id: "s-delete-removes", type: "http", expected: "DELETE removes the record from the list" },
-        { id: "s-delete-unknown-404", type: "edge", expected: "DELETE of an unknown id returns 404" },
-        { id: "s-validation-limit", type: "edge", expected: "limit=0 and limit=abc return 4xx" },
-        { id: "s-validation-create", type: "edge", expected: "POST without score returns 4xx" },
-        { id: "s-json-content-type", type: "http", expected: "application/json responses (bonus)" },
-        { id: "s-no-console-errors", type: "console", expected: "zero console errors (bonus)" },
-      ],
-    },
-    acceptanceCriteria:
-      "POST /api/scores with { player, score } returns a 2xx JSON object with a non-empty id echoing both fields. GET /api/scores returns a JSON array (insertion order by default) supporting combinable query params: player (exact match), minScore (score >= value), order=score with dir=asc|desc, and limit (positive integer). DELETE /api/scores/{id} returns 2xx and removes the record; an unknown id returns 404. Invalid limits (0, negative, non-numeric) and a POST without score return 4xx.",
-  },
-];
+      "POST /api/scores with { player, score } returns a 2xx JSON object with a non-empty id echoing both fields; missing/non-numeric fields return 4xx. GET /api/scores supports ?player= (exact match), ?minScore= (score >= value), ?order=score&dir=asc|desc and ?limit=<positive int> (combinable); invalid filter values return 4xx. DELETE /api/scores/{id} returns 2xx and the record disappears; unknown ids return 404.",
+  },];
 
 /**
  * Attaches the check manifest parsed from `verification/specs/<slug>.md` to
