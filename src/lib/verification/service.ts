@@ -1,10 +1,33 @@
 import { prisma } from "@/lib/prisma";
 import { runVerification } from "@coderunner/verification-harness/src/cli.ts";
+import type { CheckResult } from "@coderunner/verification-harness/src/core/types.ts";
 import { join } from "node:path";
 import { mkdir, readFile, readdir } from "node:fs/promises";
 import { uploadVerificationEvidence } from "@/lib/storage";
 
 type HarnessChallengeId = Parameters<typeof runVerification>[0]["challengeId"];
+
+const SCORE_BASE = 1000;
+const SCORE_REQUIRED_FAILED_PENALTY = 50;
+const SCORE_BONUS_PER_PASS = 10;
+const SCORE_BONUS_MAX = 100;
+const SCORE_MIN = 0;
+const SCORE_MAX = 1000;
+
+function computeScore(checks: readonly CheckResult[]): number {
+  let score = SCORE_BASE;
+  let bonusEarned = 0;
+  for (const check of checks) {
+    if (check.severity === "required" && check.status === "fail") {
+      score -= SCORE_REQUIRED_FAILED_PENALTY;
+    }
+    if (check.severity === "bonus" && check.status === "pass") {
+      bonusEarned += SCORE_BONUS_PER_PASS;
+    }
+  }
+  score += Math.min(bonusEarned, SCORE_BONUS_MAX);
+  return Math.max(SCORE_MIN, Math.min(SCORE_MAX, score));
+}
 
 /**
  * Upload verification artifacts to R2
@@ -124,6 +147,7 @@ export async function processVerificationResults(
       skipped: number;
       requiredFailed?: number;
     };
+    checks?: readonly CheckResult[];
   }
 ): Promise<void> {
   try {
@@ -143,6 +167,9 @@ export async function processVerificationResults(
     // Determine if verification passed
     const passed = report.verdict === "pass";
 
+    // Compute score server-side from check results (never trust client)
+    const score = report.checks ? computeScore(report.checks) : null;
+
     // Update the run with verification results.
     // Timing (startedAt/endedAt/elapsedMs) is server-owned and set at submit;
     // the verifier only reports pass/fail and evidence.
@@ -150,6 +177,7 @@ export async function processVerificationResults(
       where: { id: runId },
       data: {
         status: passed ? "verified" : "failed",
+        ...(score !== null ? { score } : {}),
       },
     });
 

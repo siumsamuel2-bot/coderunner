@@ -57,7 +57,7 @@ export const runsRouter = router({
           challenge: true,
           verification: true,
         },
-        orderBy: { elapsedMs: "asc" },
+        orderBy: [{ score: "desc" }, { elapsedMs: "asc" }],
         take: 50,
       });
     }),

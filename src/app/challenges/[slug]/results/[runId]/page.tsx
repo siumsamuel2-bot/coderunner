@@ -114,6 +114,14 @@ export default async function RunResultsPage({
             </div>
             <div className='bg-gray-50 dark:bg-gray-700 rounded-lg p-4'>
               <p className='text-xs font-medium text-gray-500 dark:text-gray-400 mb-1'>
+                Score
+              </p>
+              <p className='text-lg font-semibold text-gray-900 dark:text-gray-100 tabular-nums'>
+                {run.score !== null ? `${run.score} / 1000` : 'N/A'}
+              </p>
+            </div>
+            <div className='bg-gray-50 dark:bg-gray-700 rounded-lg p-4'>
+              <p className='text-xs font-medium text-gray-500 dark:text-gray-400 mb-1'>
                 Attempts
               </p>
               <p className='text-lg font-semibold text-gray-900 dark:text-gray-100 tabular-nums'>

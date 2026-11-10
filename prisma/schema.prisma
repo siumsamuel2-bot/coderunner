@@ -26,6 +26,7 @@ model Challenge {
   description        String
   difficulty         String
   estimatedMinutes   Int
+  timeLimitMinutes   Int?
   testSpec           Json
   acceptanceCriteria String
   createdAt          DateTime @default(now())
@@ -43,6 +44,7 @@ model Run {
   endedAt     DateTime?
   elapsedMs   Int?
   attempts    Int       @default(0)
+  score       Int?
   promptChain Json?
   toolLog     Json?
   createdAt   DateTime  @default(now())

@@ -67,7 +67,7 @@ function createPrismaClient(): PrismaClient {
   return client.$extends({
     query: {
       $allModels: {
-        async $allOperations({ operation, args, query }) {
+        async $allOperations({ args, query }) {
           return withRetry(() => query(args));
         },
       },

@@ -67,12 +67,15 @@ export default async function LeaderboardPage() {
                     <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                       Rank
                     </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                      User
-                    </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                      Time
-                    </th>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                        User
+                      </th>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                        Score
+                      </th>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                        Time
+                      </th>
                       <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
                         Verified at
                       </th>
@@ -103,6 +106,9 @@ export default async function LeaderboardPage() {
                           )}
                           <span>{run.user.name || 'Anonymous'}</span>
                         </span>
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 tabular-nums'>
+                        {run.score !== null ? run.score : '—'}
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100'>
                         {run.elapsedMs !== null
