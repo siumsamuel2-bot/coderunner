@@ -48,8 +48,11 @@ export default async function ChallengesPage() {
         <h1 className='mb-8 text-3xl font-bold text-center text-gray-900 dark:text-gray-100'>
           Coderunner Challenges
         </h1>
-        <p className='mb-12 text-center text-gray-600 dark:text-gray-400 max-w-2xl mx-auto'>
+        <p className='mb-6 text-center text-gray-600 dark:text-gray-400 max-w-2xl mx-auto'>
           Build apps with AI and race against the clock on verified leaderboards
+        </p>
+        <p className='mb-12 text-center text-sm text-indigo-600 dark:text-indigo-400 font-medium max-w-2xl mx-auto'>
+          Use ChatGPT, Claude, Cursor, Copilot&mdash;or nothing. Your result is what matters.
         </p>
 
         {challenges.length > 0 ? (

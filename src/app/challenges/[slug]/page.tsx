@@ -140,6 +140,9 @@ export default async function ChallengeDetailPage({
         <h1 className='mb-2 text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight'>
           {challenge.title}
         </h1>
+        <p className='mb-6 text-sm text-indigo-600 dark:text-indigo-400 font-medium'>
+          Build with AI. Ship it. Get verified. Beat the clock.
+        </p>
 
         {/* What you\'ll build */}
         <section className='mb-10'>
@@ -312,8 +315,8 @@ export default async function ChallengeDetailPage({
             )}
             {run && inProgress && deadline && (
               <p className='mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed'>
-                Your run is saved server-side — leave this page and come back
-                later; progress persists.
+                Timer starts when you submit. Deployment time doesn&apos;t count toward your
+                result. You can leave and come back later &mdash; progress is saved server-side.
               </p>
             )}
           </div>

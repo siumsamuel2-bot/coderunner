@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
+import { ShareButton } from './ShareButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -213,6 +214,7 @@ export default async function ResultPage({
               >
                 View leaderboard
               </Link>
+              <ShareButton runId={run.id} />
             </div>
           </div>
         )}
