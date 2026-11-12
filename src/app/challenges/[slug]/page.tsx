@@ -256,11 +256,31 @@ export default async function ChallengeDetailPage({
             <h2 className='mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider'>
               Evaluation
             </h2>
-            <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
-              Your submission is verified automatically against the test cases above.
+            <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3'>
+              Your submission is verified automatically against the test cases below.
               A run is marked <strong className='text-gray-900 dark:text-gray-100'>verified</strong> only when all checks pass.
-              Verified runs are ranked by completion time on the challenge leaderboard.
             </p>
+            <ul className='space-y-2 text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
+              {testSpec?.checks?.map((check) => (
+                <li key={check.id} className='flex items-start gap-3'>
+                  <span className='mt-0.5 shrink-0 text-gray-400 dark:text-gray-500'>
+                    ✓
+                  </span>
+                  <span>
+                    {check.type.charAt(0).toUpperCase() + check.type.slice(1)} test
+                    {check.id && ` — ${check.id}`}
+                  </span>
+                </li>
+              ))}
+              {(!testSpec?.checks?.length) && (
+                <li className='flex items-start gap-3'>
+                  <span className='mt-0.5 shrink-0 text-gray-400 dark:text-gray-500'>
+                    —
+                  </span>
+                  <span>No automated test cases defined for this challenge.</span>
+                </li>
+              )}
+            </ul>
           </div>
 
           {/* Journey indicator */}

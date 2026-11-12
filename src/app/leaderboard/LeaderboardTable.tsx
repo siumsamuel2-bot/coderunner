@@ -9,6 +9,7 @@ type LeaderboardRun = {
   user: { id: string; name: string | null; image: string | null } | null;
   challenge: { slug: string; title: string };
   elapsedMs: number | null;
+  score: number | null;
   endedAt: Date | null;
   verification: {
     id: string;
@@ -83,6 +84,9 @@ export function LeaderboardTable({ runs, currentUserId }: { runs: LeaderboardRun
             </th>
             <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
               User
+            </th>
+            <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+              Score
             </th>
             <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
               Time
@@ -168,6 +172,9 @@ export function LeaderboardTable({ runs, currentUserId }: { runs: LeaderboardRun
                       </span>
                     )}
                   </span>
+                </td>
+                <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 font-medium'>
+                  {run.score !== null ? run.score : 'N/A'}
                 </td>
                 <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 font-mono'>
                   {run.elapsedMs !== null
