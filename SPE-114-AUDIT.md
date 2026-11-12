@@ -107,7 +107,6 @@ Per SPE-114 requirements:
 |------|----------------------|--------|
 | Server-side trustworthy timing | Timer deadline should be validated server-side (elapsedMs vs estimatedMinutes). Currently client-side only. | Not done |
 | Period filter on leaderboard | Add date-range query support to `getLeaderboard` tRPC procedure | Not done |
-| Leaderboard score column | Add score to `getLeaderboard` select and display in table | Not done |
 
 ## 5. Architectural risks
 
@@ -131,17 +130,17 @@ Per SPE-114 requirements:
 - Share result CTA on result page
 - Timer explanatory text
 
-### Phase 2 — Frontend-only, can start now
-- Score display on leaderboard table
+### Phase 2 — Complete ✅ (commit `5d6df8e`)
+- Score column on leaderboard table
 - "What gets verified" checklist on challenge page evaluation section
 
 ### Phase 3 — Requires backend work
 - Server-side timing enforcement
 - Period filter on leaderboard
 
-## 7. Implementation Status (as of 2026-11-11)
+## 7. Implementation Status (as of 2026-11-12)
 
-**Completed (commit `7e147b2`):**
+**Completed:**
 - `aiAllowed` Boolean field added to Challenge model (Prisma schema + DB synced)
 - `score` Int field added to Run model (Prisma schema + DB synced)
 - Seed data updated with `aiAllowed: true` for all 5 challenges
@@ -151,6 +150,8 @@ Per SPE-114 requirements:
 - Timer explanatory text on challenge page
 - Score stat card on result page
 - Share result CTA on result page
+- Score column on leaderboard table
+- "What gets verified" checklist on challenge page evaluation section
 - `tsc --noEmit`: clean
 - `eslint`: clean (1 pre-existing warning not from my changes)
 - `next build`: clean — all routes compile
@@ -158,7 +159,7 @@ Per SPE-114 requirements:
 **Remaining (backend-dependent):**
 - Server-side timing enforcement (client-side timer can be manipulated)
 - Period filter on leaderboard
-- Score column on leaderboard table
-- "What gets verified" checklist on challenge page evaluation section
 
-**SPE-114 status:** `blocked` → can move to `in_progress` once remaining backend items are scheduled or addressed.
+**Commits:** `6e16ec4` (Phase 1 frontend), `7e147b2` (backend fields + scoring), `80c4ac9` (audit doc), `5d6df8e` (Phase 2 frontend)
+
+**SPE-114 status:** `blocked` — PATCH API returns 500 (server limitation). Remaining items need backend work scheduled.
