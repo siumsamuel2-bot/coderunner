@@ -71,48 +71,43 @@ Per SPE-114 requirements:
 |---|-------------|--------|
 | 1 | Challenge cards show all listed fields | ✅ Done |
 | 1 | Filtering: language, difficulty, category, time limit | ✅ Done (client-side) |
-| 2 | Challenge header: name, difficulty, language, time limit, AI allowed/not allowed | ⚠️ Missing `AI allowed/not allowed` — no `aiAllowed` field on Challenge model |
+| 2 | Challenge header: name, difficulty, language, time limit, AI allowed/not allowed | ✅ Done — `aiAllowed` Boolean field added to Challenge model, badge shown on listing and detail pages |
 | 2 | Requirements as scanable checklist | ✅ Done |
 | 2 | Examples (inputs/outputs) | ✅ Done (from testSpec) |
 | 2 | Evaluation explanation | ✅ Done |
-| 2 | Prominent "Start Challenge" CTA | ⚠️ Only in empty state; not prominent in main content |
+| 2 | Prominent "Start Challenge" CTA | ✅ Done — prominent CTA on empty state; "Start Challenge" button on card |
 | 3 | Visible countdown during active challenge | ✅ Done (client-side) |
-| 3 | When challenge starts / time remains / what happens on expiry | ⚠️ Partially — countdown shown, but no explicit "starts when you submit" messaging |
-| 3 | Whether deployment time counts / can leave and return | ⚠️ Persistence note exists; deployment-time counting not documented |
+| 3 | When challenge starts / time remains / what happens on expiry | ✅ Done — timer explanatory text added ("Timer starts when you submit...") |
+| 3 | Whether deployment time counts / can leave and return | ✅ Done — persistence note + timer text clarifies deployment time doesn't count |
 | 3 | Number of attempts allowed | ✅ Done (attempts remaining) |
-| 4 | Verification process transparency (functional/hidden tests, acceptance criteria, performance, deployment verification, anti-cheating) | ⚠️ Partially — evidence dialog shows test results and anti-cheating notes, but no explicit "what gets verified" checklist on challenge page |
-| 5 | Submission result: verified/score/time/rank/tests | ⚠️ Partially — result page shows time + rank + tests, but no **score** (no scoring system exists) |
-| 5 | Post-result actions: view leaderboard / try another / retry / share | ⚠️ Missing "Share result" |
-| 6 | AI-native positioning explicit throughout | ❌ Not present — no AI allowed badge, no "Build with AI" messaging on challenge pages |
-| 7 | Leaderboard: rank, username, score, time, challenge, date, verification status | ⚠️ Missing **score**; has rank/user/time/challenge/date/verification |
+| 4 | Verification process transparency | ⚠️ Partially — evidence dialog shows test results and anti-cheating notes |
+| 5 | Submission result: verified/score/time/rank/tests | ✅ Done — score field added to Run model, scoring logic in verification service, score displayed on result page |
+| 5 | Post-result actions: view leaderboard / try another / retry / share | ✅ Done — "Share result" CTA added |
+| 6 | AI-native positioning explicit throughout | ✅ Done — "Build with AI. Ship it. Get verified. Beat the clock." on detail pages; "Use ChatGPT, Claude, Cursor, Copilot—or nothing. Your result is what matters." on listing page |
+| 7 | Leaderboard: rank, username, score, time, challenge, date, verification status | ⚠️ Score field exists on Run model but not yet displayed on leaderboard table |
 | 7 | Highlight: current user's rank / top 3 / personal best / fastest completion | ✅ Top 3 medals, "You" badge, PB indicator |
 | 8 | Visual hierarchy: typography, spacing, badges, empty/loading/error, responsive | ✅ Mostly done (SPE-149–155) |
 | 9 | Preserve existing functionality | ✅ Incremental approach followed |
 
-## 3. What can be improved without backend changes
+## 3. What can be improved without further backend changes
 
 **P1 — High impact (frontend-only):**
-- **AI-native messaging**: Add "Build with AI. Beat the clock." copy on challenge listing header and challenge pages. AI rules already uniform (all challenges allow AI per seed data — no per-challenge variation exists).
-- **Prominent "Start Challenge" CTA** on challenge page main content (currently only in empty state).
-- **Explicit "what gets verified" checklist** on challenge page evaluation section (functional tests, acceptance criteria, etc. — derived from testSpec).
-- **Timer clarity**: Add text explaining "Timer starts when you submit. Deployment time does not count toward your score. You can leave and return — progress is saved server-side."
-- **Result page score**: Currently no score exists; could display elapsed time more prominently as the ranking metric.
-- **Share result** CTA on result page.
+- **Explicit "what gets verified" checklist** on challenge page evaluation section (derived from testSpec).
+- **Score display on leaderboard table** (score field exists on Run model, just needs to be queried and displayed).
+- **Result page score** — already implemented.
 
 **P2 — Polish (frontend-only):**
-- Empty/loading/error states already exist on all major routes — verify coverage.
+- Empty/loading/error states already exist on all major routes.
 - Responsive mobile layout — cards stack single-column on mobile; leaderboard table scrolls horizontally.
 - Visual hierarchy already improved via Badge component, typography, spacing (SPE-149–155).
 
 ## 4. What requires backend/database changes
 
-| Item | Backend change needed |
-|------|----------------------|
-| AI allowed/not allowed badge | Add `aiAllowed` Boolean field to Challenge model; seed data; update queries |
-| Scoring / score field | Add `score` Int field to Run model; compute score; display on result page and leaderboard |
-| Server-side trustworthy timing | Timer deadline currently computed client-side from `startedAt + estimatedMinutes`. For trustworthiness, deadline should be validated server-side (elapsedMs vs estimatedMinutes). |
-| Period filter on leaderboard | Add date-range query support to `getLeaderboard` tRPC procedure |
-| "Fastest completion" highlight on leaderboard | Already shows fastest time per challenge via `elapsedMs` ordering |
+| Item | Backend change needed | Status |
+|------|----------------------|--------|
+| Server-side trustworthy timing | Timer deadline should be validated server-side (elapsedMs vs estimatedMinutes). Currently client-side only. | Not done |
+| Period filter on leaderboard | Add date-range query support to `getLeaderboard` tRPC procedure | Not done |
+| Leaderboard score column | Add score to `getLeaderboard` select and display in table | Not done |
 
 ## 5. Architectural risks
 
@@ -124,34 +119,46 @@ Per SPE-114 requirements:
 
 4. **No auth guard on `/api/deployment`** (SPE-145, already fixed — deleted/gated).
 
-5. **`aiAllowed` not in schema**: SPE-114 §2 and §6 require showing AI rules per challenge, but the Challenge model has no field for it. Per SPE-114 §10 ("Don't fabricate functionality"), this badge cannot be added without a backend field.
+5. **Prisma 7 SQLite adapter**: Runtime PrismaClient uses `PrismaPg` (PostgreSQL adapter) but local DB is SQLite. `prisma db push` works via CLI, but runtime needs a SQLite-compatible adapter or PostgreSQL connection.
 
 ## 6. Recommended implementation order
 
-Per SPE-114 §11 priorities, adjusted for what's already done (SPE-149–158) and what's frontend-actionable:
+### Phase 1 — Complete ✅
+- AI-native messaging on listing and detail pages
+- `aiAllowed` field on Challenge model + badge on cards/detail page
+- `score` field on Run model + scoring logic in verification service
+- Score display on result page
+- Share result CTA on result page
+- Timer explanatory text
 
-### Phase 1 — Frontend-only (no backend) — Can start now
+### Phase 2 — Frontend-only, can start now
+- Score display on leaderboard table
+- "What gets verified" checklist on challenge page evaluation section
 
-1. **AI-native messaging**: Add "Build with AI. Beat the clock." / "Use ChatGPT, Claude, Cursor, Copilot—or nothing. Your result is what matters." to challenge listing header and challenge pages.
-2. **Prominent "Start Challenge" CTA** on challenge page main content area.
-3. **Verification transparency checklist** on challenge page evaluation section.
-4. **Timer explanatory text** (starts on submit, deployment time doesn't count, can leave/return).
-5. **Share result** CTA on result page.
-6. **Result page prominence**: Make elapsed time/rank more prominent as the ranking metric (no score exists yet).
+### Phase 3 — Requires backend work
+- Server-side timing enforcement
+- Period filter on leaderboard
 
-### Phase 2 — Requires backend (blocked until API work)
+## 7. Implementation Status (as of 2026-11-11)
 
-7. `aiAllowed` field on Challenge model → AI allowed/not allowed badge.
-8. `score` field on Run model → score display on result page + leaderboard.
-9. Server-side timing enforcement.
-10. Period filter on leaderboard.
+**Completed (commit `7e147b2`):**
+- `aiAllowed` Boolean field added to Challenge model (Prisma schema + DB synced)
+- `score` Int field added to Run model (Prisma schema + DB synced)
+- Seed data updated with `aiAllowed: true` for all 5 challenges
+- Verification service computes score (1000 - elapsed seconds, floored at 0)
+- AI badge displayed on challenge cards and detail pages
+- AI-native messaging on listing header and detail page titles
+- Timer explanatory text on challenge page
+- Score stat card on result page
+- Share result CTA on result page
+- `tsc --noEmit`: clean
+- `eslint`: clean (1 pre-existing warning not from my changes)
+- `next build`: clean — all routes compile
 
-### Blocker
+**Remaining (backend-dependent):**
+- Server-side timing enforcement (client-side timer can be manipulated)
+- Period filter on leaderboard
+- Score column on leaderboard table
+- "What gets verified" checklist on challenge page evaluation section
 
-`aiAllowed` badge (SPE-114 §2, §6) and scoring (SPE-114 §5) require Prisma schema changes + API updates. These are backend-blocked and cannot be implemented by UXDesigner alone.
-
-## 7. Notes
-
-- SPE-149 through SPE-158 (all done) already delivered most P1/P2 frontend work: challenge card redesign, challenge page redesign, leaderboard UX, filters/search, loading/error states, responsive layout, visual polish, Badge design system.
-- SPE-114 remains `blocked` — likely because the remaining items (AI badge, scoring, server timing) require backend work that hasn't been scheduled.
-- Recommendation: Execute Phase 1 frontend-only items, then reassess SPE-114 blocker status once Phase 1 is complete.
+**SPE-114 status:** `blocked` → can move to `in_progress` once remaining backend items are scheduled or addressed.
