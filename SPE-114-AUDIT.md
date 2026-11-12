@@ -105,8 +105,8 @@ Per SPE-114 requirements:
 
 | Item | Backend change needed | Status |
 |------|----------------------|--------|
-| Server-side trustworthy timing | Timer deadline should be validated server-side (elapsedMs vs estimatedMinutes). Currently client-side only. | Not done |
-| Period filter on leaderboard | Add date-range query support to `getLeaderboard` tRPC procedure | Not done |
+| Server-side trustworthy timing | Timer deadline validated server-side (elapsedMs vs estimatedMinutes) in verification service | Complete |
+| Period filter on leaderboard | Date-range query support added to `getLeaderboard` tRPC procedure + frontend URL param UI | Complete |
 
 ## 5. Architectural risks
 
@@ -134,17 +134,18 @@ Per SPE-114 requirements:
 - Score column on leaderboard table
 - "What gets verified" checklist on challenge page evaluation section
 
-### Phase 3 — Requires backend work
-- Server-side timing enforcement
-- Period filter on leaderboard
+### Phase 3 — Complete ✅ (commit `2497ab9`)
+- Server-side timing enforcement (elapsedMs vs estimatedMinutes validated in verification service)
+- Period filter on leaderboard (tRPC procedure + frontend URL param UI with All time / Past 24h / Past 7 days / Past 30 days)
 
 ## 7. Implementation Status (as of 2026-11-12)
 
-**Completed:**
+**All SPE-114 items complete:**
 - `aiAllowed` Boolean field added to Challenge model (Prisma schema + DB synced)
 - `score` Int field added to Run model (Prisma schema + DB synced)
 - Seed data updated with `aiAllowed: true` for all 5 challenges
 - Verification service computes score (1000 - elapsed seconds, floored at 0)
+- Server-side timing enforcement: runs exceeding estimatedMinutes are marked failed
 - AI badge displayed on challenge cards and detail pages
 - AI-native messaging on listing header and detail page titles
 - Timer explanatory text on challenge page
@@ -152,14 +153,11 @@ Per SPE-114 requirements:
 - Share result CTA on result page
 - Score column on leaderboard table
 - "What gets verified" checklist on challenge page evaluation section
+- Period filter on leaderboard (All time / Past 24h / Past 7 days / Past 30 days)
 - `tsc --noEmit`: clean
 - `eslint`: clean (1 pre-existing warning not from my changes)
 - `next build`: clean — all routes compile
 
-**Remaining (backend-dependent):**
-- Server-side timing enforcement (client-side timer can be manipulated)
-- Period filter on leaderboard
+**Commits:** `6e16ec4` (Phase 1 frontend), `7e147b2` (backend fields + scoring), `80c4ac9` (audit doc), `5d6df8e` (Phase 2 frontend), `2497ab9` (Phase 3 backend)
 
-**Commits:** `6e16ec4` (Phase 1 frontend), `7e147b2` (backend fields + scoring), `80c4ac9` (audit doc), `5d6df8e` (Phase 2 frontend)
-
-**SPE-114 status:** `blocked` — PATCH API returns 500 (server limitation). Remaining items need backend work scheduled.
+**SPE-114 status:** All implementation items complete. PATCH API returns 500 (server limitation) preventing status change via API. Issue remains `blocked` in Paperclip despite all work being done.
