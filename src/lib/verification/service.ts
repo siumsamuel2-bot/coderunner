@@ -88,18 +88,22 @@ export async function processVerificationResults(
     // Determine if verification passed
     const passed = report.verdict === 'pass';
     
+    // Server-side timing enforcement: elapsed time must not exceed challenge limit
+    const timeLimitMs = run.challenge.estimatedMinutes * 60 * 1000;
+    const withinTimeLimit = (report.durationMs || 0) <= timeLimitMs;
+    
     // Compute score: base 1000, minus 1 point per second, floored at 0
     const elapsedSeconds = Math.ceil((report.durationMs || 0) / 1000);
-    const score = Math.max(0, 1000 - elapsedSeconds);
+    const score = passed && withinTimeLimit ? Math.max(0, 1000 - elapsedSeconds) : null;
     
     // Update the run with verification results
     await prisma.run.update({
       where: { id: runId },
       data: {
-        status: passed ? 'verified' : 'failed',
+        status: passed && withinTimeLimit ? 'verified' : 'failed',
         endedAt: new Date(report.finishedAt),
         elapsedMs: report.durationMs || 0,
-        score: passed ? score : null,
+        score,
       },
     });
     
