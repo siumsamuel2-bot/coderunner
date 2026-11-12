@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model User {
@@ -69,6 +69,7 @@ model Challenge {
   language           String   @default("JavaScript")
   testSpec           Json
   acceptanceCriteria String
+  aiAllowed          Boolean @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   runs               Run[]
@@ -83,6 +84,7 @@ model Run {
   startedAt   DateTime  @default(now())
   endedAt     DateTime?
   elapsedMs   Int?
+  score       Int?
   promptChain Json?
   toolLog     Json?
   createdAt   DateTime  @default(now())

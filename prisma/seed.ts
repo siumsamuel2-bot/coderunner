@@ -2,7 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) as any });
 
 const challenges = [
   {
@@ -14,6 +14,7 @@ const challenges = [
     estimatedMinutes: 15,
     category: "Utility",
     language: "JavaScript",
+    aiAllowed: true,
     testSpec: {
       checks: [
         { id: "renders", type: "dom", target: "calculator-root" },
@@ -37,6 +38,7 @@ const challenges = [
     estimatedMinutes: 30,
     category: "Fullstack",
     language: "TypeScript",
+    aiAllowed: true,
     testSpec: {
       checks: [
         { id: "login", type: "auth", flow: "login", expected: "session" },
@@ -59,6 +61,7 @@ const challenges = [
     estimatedMinutes: 45,
     category: "Media",
     language: "JavaScript",
+    aiAllowed: true,
     testSpec: {
       checks: [
         { id: "upload", type: "interaction", target: "pdf-upload" },
@@ -79,6 +82,7 @@ const challenges = [
     estimatedMinutes: 25,
     category: "Frontend",
     language: "JavaScript",
+    aiAllowed: true,
     testSpec: {
       checks: [
         { id: "hero", type: "dom", target: "hero" },
@@ -100,6 +104,7 @@ const challenges = [
     estimatedMinutes: 20,
     category: "AI",
     language: "JavaScript",
+    aiAllowed: true,
     testSpec: {
       checks: [
         { id: "input", type: "dom", target: "chat-input" },

@@ -134,6 +134,10 @@ export default async function ChallengeDetailPage({
             <Badge variant='category' value={challenge.category} />
             <Badge variant='language' value={challenge.language} />
             <Badge variant='time' value={`${challenge.estimatedMinutes} min`} />
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${challenge.aiAllowed ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400' : 'bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${challenge.aiAllowed ? 'bg-indigo-600' : 'bg-gray-400'}`}></span>
+              {challenge.aiAllowed ? 'AI allowed' : 'No AI'}
+            </span>
           </div>
         </div>
 

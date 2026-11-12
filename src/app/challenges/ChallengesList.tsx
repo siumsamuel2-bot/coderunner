@@ -12,6 +12,7 @@ type ChallengeWithStats = {
   estimatedMinutes: number;
   category: string;
   language: string;
+  aiAllowed: boolean;
   attemptCount: number;
   fastestTimeMs: number | null;
 };

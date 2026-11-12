@@ -140,11 +140,17 @@ export default async function ResultPage({
               Great work — your solution is verified
             </h1>
 
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6'>
+            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6'>
               <div className='bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg'>
                 <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase'>Time</p>
                 <p className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
                   {run.elapsedMs !== null ? `${(run.elapsedMs / 1000).toFixed(2)}s` : 'N/A'}
+                </p>
+              </div>
+              <div className='bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg'>
+                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase'>Score</p>
+                <p className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                  {run.score !== null ? run.score : 'N/A'}
                 </p>
               </div>
               <div className='bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg'>

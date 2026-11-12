@@ -88,6 +88,10 @@ export async function processVerificationResults(
     // Determine if verification passed
     const passed = report.verdict === 'pass';
     
+    // Compute score: base 1000, minus 1 point per second, floored at 0
+    const elapsedSeconds = Math.ceil((report.durationMs || 0) / 1000);
+    const score = Math.max(0, 1000 - elapsedSeconds);
+    
     // Update the run with verification results
     await prisma.run.update({
       where: { id: runId },
@@ -95,6 +99,7 @@ export async function processVerificationResults(
         status: passed ? 'verified' : 'failed',
         endedAt: new Date(report.finishedAt),
         elapsedMs: report.durationMs || 0,
+        score: passed ? score : null,
       },
     });
     

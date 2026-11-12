@@ -12,6 +12,7 @@ type ChallengeWithStats = {
   estimatedMinutes: number;
   category: string;
   language: string;
+  aiAllowed: boolean;
   attemptCount: number;
   fastestTimeMs: number | null;
 };
@@ -38,6 +39,7 @@ export default async function ChallengesPage() {
     estimatedMinutes: c.estimatedMinutes,
     category: c.category,
     language: c.language,
+    aiAllowed: c.aiAllowed,
     attemptCount: c._count.runs,
     fastestTimeMs: c.runs[0]?.elapsedMs ?? null,
   }));
