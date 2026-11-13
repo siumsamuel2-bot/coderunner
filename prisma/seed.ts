@@ -116,6 +116,28 @@ const challenges = [
     acceptanceCriteria:
       "Messages render in a history list, a reply appears after send, pending state shown while waiting.",
   },
+  {
+    slug: "book-library-api",
+    title: "Book Library API",
+    description:
+      "Build a RESTful book library API with endpoints to list, add, update, and delete books, including input validation and error handling.",
+    difficulty: "medium",
+    estimatedMinutes: 30,
+    category: "Backend",
+    language: "JavaScript",
+    aiAllowed: true,
+    testSpec: {
+      checks: [
+        { id: "list-books", type: "api", method: "GET", path: "/api/books", expected: "list" },
+        { id: "create-book", type: "api", method: "POST", path: "/api/books", expected: 201 },
+        { id: "update-book", type: "api", method: "PATCH", path: "/api/books/:id", expected: 200 },
+        { id: "delete-book", type: "api", method: "DELETE", path: "/api/books/:id", expected: 200 },
+        { id: "invalid-input", type: "edge", input: "not-a-book", expected: "error" },
+      ],
+    },
+    acceptanceCriteria:
+      "All CRUD endpoints work, input validation rejects invalid payloads, error responses are friendly and informative.",
+  },
 ];
 
 async function main() {
