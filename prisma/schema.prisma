@@ -45,6 +45,8 @@ model Run {
   elapsedMs   Int?
   attempts    Int       @default(0)
   score       Int?
+  scoreV2     Int?
+  rankV2      Int?
   promptChain Json?
   toolLog     Json?
   createdAt   DateTime  @default(now())
@@ -53,6 +55,10 @@ model Run {
   challenge   Challenge     @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   verification Verification?
   verificationJobs VerificationJob[]
+
+  @@index([challengeId, scoreV2, elapsedMs])
+  @@index([challengeId, userId, scoreV2])
+  @@index([userId, challengeId, scoreV2])
 }
 
 model Verification {

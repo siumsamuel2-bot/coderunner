@@ -29,6 +29,59 @@ function computeScore(checks: readonly CheckResult[]): number {
   return Math.max(SCORE_MIN, Math.min(SCORE_MAX, score));
 }
 
+const DIFFICULTY_MULTIPLIERS: Record<string, number> = {
+  easy: 1.0,
+  medium: 1.25,
+  hard: 1.5,
+};
+
+function computeTimeFactor(elapsedMs: number | null, estimatedMinutes: number): number {
+  if (!elapsedMs) return 1.0;
+  const estimatedMs = estimatedMinutes * 60 * 1000;
+  return Math.max(0.7, 1.0 - elapsedMs / estimatedMs);
+}
+
+function computeAttemptFactor(attempts: number): number {
+  return Math.max(0.85, 1.0 - 0.05 * Math.max(0, attempts - 1));
+}
+
+function computeScoreV2(baseScore: number, difficulty: string, elapsedMs: number | null, estimatedMinutes: number, attempts: number): number {
+  const difficultyMultiplier = DIFFICULTY_MULTIPLIERS[difficulty] ?? 1.0;
+  const timeFactor = computeTimeFactor(elapsedMs, estimatedMinutes);
+  const attemptFactor = computeAttemptFactor(attempts);
+  const raw = baseScore * difficultyMultiplier * timeFactor * attemptFactor;
+  return Math.max(SCORE_MIN, Math.min(SCORE_MAX, Math.round(raw)));
+}
+
+async function computeRankV2(challengeId: string): Promise<void> {
+  const runs = await prisma.run.findMany({
+    where: {
+      challengeId,
+      scoreV2: { not: null },
+    },
+    orderBy: [
+      { scoreV2: "desc" },
+      { elapsedMs: "asc" },
+      { attempts: "asc" },
+      { createdAt: "asc" },
+    ],
+  });
+
+  let currentRank = 0;
+  let prevKey: string | null = null;
+  for (const run of runs) {
+    const key = `${run.scoreV2}|${run.elapsedMs}|${run.attempts}|${run.createdAt.getTime()}`;
+    if (key !== prevKey) {
+      currentRank++;
+      prevKey = key;
+    }
+    await prisma.run.update({
+      where: { id: run.id },
+      data: { rankV2: currentRank },
+    });
+  }
+}
+
 /**
  * Upload verification artifacts to R2
  */
@@ -170,6 +223,18 @@ export async function processVerificationResults(
     // Compute score server-side from check results (never trust client)
     const score = report.checks ? computeScore(report.checks) : null;
 
+    // Compute scoreV2 under the CTO-approved formula (difficulty-aware, time-aware, attempt-aware)
+    let scoreV2: number | null = null;
+    if (score !== null && run.challenge) {
+      scoreV2 = computeScoreV2(
+        score,
+        run.challenge.difficulty,
+        run.elapsedMs,
+        run.challenge.estimatedMinutes,
+        run.attempts,
+      );
+    }
+
     // Update the run with verification results.
     // Timing (startedAt/endedAt/elapsedMs) is server-owned and set at submit;
     // the verifier only reports pass/fail and evidence.
@@ -178,8 +243,14 @@ export async function processVerificationResults(
       data: {
         status: passed ? "verified" : "failed",
         ...(score !== null ? { score } : {}),
+        ...(scoreV2 !== null ? { scoreV2 } : {}),
       },
     });
+
+    // Recompute dense rankV2 per challenge when scoreV2 changes
+    if (scoreV2 !== null && run.challenge) {
+      await computeRankV2(run.challenge.id);
+    }
 
     // Create enhanced test output with more details
     let testOutput = "";
