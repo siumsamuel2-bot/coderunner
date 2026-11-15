@@ -84,3 +84,4 @@ model VerificationJob {
   run         Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
   challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
 }
+// FE-2 SPE-163 test change

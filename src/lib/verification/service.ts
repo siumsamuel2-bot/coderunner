@@ -35,17 +35,17 @@ const DIFFICULTY_MULTIPLIERS: Record<string, number> = {
   hard: 1.5,
 };
 
-function computeTimeFactor(elapsedMs: number | null, estimatedMinutes: number): number {
+export function computeTimeFactor(elapsedMs: number | null, estimatedMinutes: number): number {
   if (!elapsedMs) return 1.0;
   const estimatedMs = estimatedMinutes * 60 * 1000;
   return Math.max(0.7, 1.0 - elapsedMs / estimatedMs);
 }
 
-function computeAttemptFactor(attempts: number): number {
+export function computeAttemptFactor(attempts: number): number {
   return Math.max(0.85, 1.0 - 0.05 * Math.max(0, attempts - 1));
 }
 
-function computeScoreV2(baseScore: number, difficulty: string, elapsedMs: number | null, estimatedMinutes: number, attempts: number): number {
+export function computeScoreV2(baseScore: number, difficulty: string, elapsedMs: number | null, estimatedMinutes: number, attempts: number): number {
   const difficultyMultiplier = DIFFICULTY_MULTIPLIERS[difficulty] ?? 1.0;
   const timeFactor = computeTimeFactor(elapsedMs, estimatedMinutes);
   const attemptFactor = computeAttemptFactor(attempts);
