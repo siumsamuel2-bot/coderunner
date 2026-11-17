@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  computeChallengeRanks,
   dedupeBestPerUser,
   groupByChallenge,
   pickBestResult,
@@ -113,5 +114,71 @@ describe('pickBestResult (SPE-135 YourRankStrip)', () => {
 
   it('returns null with no runs', () => {
     expect(pickBestResult([], rankFor)).toBeNull();
+  });
+});
+
+describe('computeChallengeRanks (SPE-163 perf: replaces N+1 count queries)', () => {
+  it('ranks each user best by count of faster verified runs per challenge', () => {
+    const userBests = new Map<string, { elapsedMs: number }>([
+      ['c1', { elapsedMs: 100_000 }],
+      ['c2', { elapsedMs: 250_000 }],
+    ]);
+    const allVerified = [
+      // c1: three runs faster than 100k -> rank 4
+      { challengeId: 'c1', elapsedMs: 50_000 },
+      { challengeId: 'c1', elapsedMs: 80_000 },
+      { challengeId: 'c1', elapsedMs: 90_000 },
+      { challengeId: 'c1', elapsedMs: 120_000 }, // slower, not counted
+      // c2: one run faster than 250k -> rank 2
+      { challengeId: 'c2', elapsedMs: 200_000 },
+      { challengeId: 'c2', elapsedMs: 300_000 }, // slower, not counted
+    ];
+
+    const ranks = computeChallengeRanks(userBests, allVerified);
+    expect(ranks.get('c1')).toBe(4);
+    expect(ranks.get('c2')).toBe(2);
+  });
+
+  it('does not count equal-time runs as faster (ties keep rank)', () => {
+    const userBests = new Map<string, { elapsedMs: number }>([
+      ['c1', { elapsedMs: 100_000 }],
+    ]);
+    const allVerified = [
+      { challengeId: 'c1', elapsedMs: 100_000 }, // equal, not faster
+      { challengeId: 'c1', elapsedMs: 100_000 }, // equal, not faster
+      { challengeId: 'c1', elapsedMs: 50_000 },  // faster
+    ];
+
+    const ranks = computeChallengeRanks(userBests, allVerified);
+    expect(ranks.get('c1')).toBe(2); // only one faster -> rank 2
+  });
+
+  it('returns rank 1 when no verified runs exist for a challenge', () => {
+    const userBests = new Map<string, { elapsedMs: number }>([
+      ['c1', { elapsedMs: 100_000 }],
+    ]);
+    const ranks = computeChallengeRanks(userBests, []);
+    expect(ranks.get('c1')).toBe(1);
+  });
+
+  it('ignores verified runs for challenges the user has no best on', () => {
+    const userBests = new Map<string, { elapsedMs: number }>([
+      ['c1', { elapsedMs: 100_000 }],
+    ]);
+    const allVerified = [
+      { challengeId: 'c99', elapsedMs: 10_000 }, // user has no best on c99
+      { challengeId: 'c1', elapsedMs: 50_000 },
+    ];
+
+    const ranks = computeChallengeRanks(userBests, allVerified);
+    expect(ranks.get('c1')).toBe(2);
+    expect(ranks.has('c99')).toBe(false);
+  });
+
+  it('handles empty user bests', () => {
+    const ranks = computeChallengeRanks(new Map(), [
+      { challengeId: 'c1', elapsedMs: 50_000 },
+    ]);
+    expect(ranks.size).toBe(0);
   });
 });

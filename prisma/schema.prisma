@@ -47,6 +47,7 @@ model Challenge {
   category           String   @default("general")
   aiAllowed          Boolean  @default(true)
   estimatedMinutes   Int
+  timeLimitMinutes   Int?     // Hard time limit enforced at submit; null = no limit
   testSpec           Json
   acceptanceCriteria String
   createdAt          DateTime @default(now())
@@ -63,6 +64,7 @@ model Run {
   startedAt   DateTime  @default(now())
   endedAt     DateTime?
   elapsedMs   Int?
+  score       Int?      // Verification score (0-1000), computed server-side in processVerificationResults
   attempt     Int       @default(1)
   promptChain Json?
   toolLog     Json?

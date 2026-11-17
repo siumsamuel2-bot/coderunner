@@ -60,6 +60,17 @@ export async function processVerificationResults(
       evidence: c.evidence,
     }));
 
+    // Compute verification score (v1): base 1000, -50 per failed required
+    // check, +10 per passed bonus check (max +100), cap 0-1000.
+    const requiredFailed = report.checks?.filter(
+      (c) => c.severity === 'required' && c.status !== 'pass'
+    ).length ?? 0;
+    const bonusPassed = report.checks?.filter(
+      (c) => c.severity === 'bonus' && c.status === 'pass'
+    ).length ?? 0;
+    const rawScore = 1000 - requiredFailed * 50 + Math.min(bonusPassed * 10, 100);
+    const score = Math.max(0, Math.min(1000, rawScore));
+
     // Update the run with verification results
     // elapsedMs is computed server-side at submit (now - startedAt) and must
     // not be overwritten by the harness Playwright runtime (SPE-119).
@@ -68,6 +79,7 @@ export async function processVerificationResults(
       data: {
         status: passed ? 'verified' : 'failed',
         endedAt: new Date(report.finishedAt),
+        score,
         ...(run.elapsedMs == null ? { elapsedMs: report.durationMs ?? null } : {}),
       },
     });

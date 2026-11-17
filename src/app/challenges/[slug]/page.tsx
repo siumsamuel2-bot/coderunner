@@ -111,12 +111,21 @@ export default async function ChallengeDetailPage({
               </svg>
               {capitalizeLabel(challenge.language)}
             </span>
-            <span className='inline-flex items-center gap-1'>
-              <svg aria-hidden='true' className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M12 8v4l3 3' />
-              </svg>
-              ~{challenge.estimatedMinutes} min estimate
-            </span>
+            {challenge.timeLimitMinutes !== null ? (
+              <span className='inline-flex items-center gap-1'>
+                <svg aria-hidden='true' className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M12 8v4l3 3' />
+                </svg>
+                {challenge.timeLimitMinutes} min time limit
+              </span>
+            ) : (
+              <span className='inline-flex items-center gap-1'>
+                <svg aria-hidden='true' className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M12 8v4l3 3' />
+                </svg>
+                ~{challenge.estimatedMinutes} min estimate
+              </span>
+            )}
             {attemptCount > 0 && <span>{attemptCount} attempts so far</span>}
             {myAttemptCount > 0 && (
               <span>

@@ -44,6 +44,7 @@ interface ChallengeSpec {
   language: (typeof LANGUAGES)[number];
   category: (typeof CATEGORIES)[number];
   estimatedMinutes: number;
+  timeLimitMinutes?: number;
   testSpec: Prisma.InputJsonValue;
   acceptanceCriteria: string;
 }
@@ -523,10 +524,15 @@ async function main() {
         language: challenge.language,
         category: challenge.category,
         estimatedMinutes: challenge.estimatedMinutes,
+        timeLimitMinutes: challenge.timeLimitMinutes ?? challenge.estimatedMinutes,
         testSpec,
         acceptanceCriteria: challenge.acceptanceCriteria,
       },
-      create: { ...challenge, testSpec },
+      create: {
+        ...challenge,
+        timeLimitMinutes: challenge.timeLimitMinutes ?? challenge.estimatedMinutes,
+        testSpec,
+      },
     });
   }
   const count = await prisma.challenge.count();

@@ -22,8 +22,10 @@ export interface ChallengeListItem {
   category: string;
   aiAllowed: boolean;
   estimatedMinutes: number;
+  timeLimitMinutes: number | null;
   attemptCount: number;
   fastestVerifiedMs: number | null;
+  bestScore: number | null;
 }
 
 export interface FilterState {

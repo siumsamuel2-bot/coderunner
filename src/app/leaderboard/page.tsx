@@ -6,6 +6,7 @@ import { serverTrpc } from '@/utils/trpc';
 import { auth } from '@/auth';
 import { formatDuration } from '@/lib/format';
 import {
+  computeChallengeRanks,
   dedupeBestPerUser,
   groupByChallenge,
   type LeaderboardRun,
@@ -132,15 +133,40 @@ export default async function LeaderboardPage() {
         });
       }
     }
-    for (const [challengeId, info] of bestPerChallenge) {
-      const faster = await prisma.run.count({
+    // Single aggregated query instead of N+1 per-challenge count queries:
+    // fetch every verified run for the user's attempted challenges, then
+    // compute ranks in JS via computeChallengeRanks (O(1) DB queries).
+    const challengeIds = [...bestPerChallenge.keys()];
+    let allVerifiedForRanking: Array<{
+      challengeId: string;
+      elapsedMs: number;
+    }> = [];
+    if (challengeIds.length > 0) {
+      const rows = await prisma.run.findMany({
         where: {
-          challengeId,
+          challengeId: { in: challengeIds },
           status: 'verified',
-          elapsedMs: { lt: info.elapsedMs },
+          elapsedMs: { not: null },
+        },
+        select: {
+          challengeId: true,
+          elapsedMs: true,
         },
       });
-      const rank = faster + 1;
+      // where clause guarantees elapsedMs is not null
+      allVerifiedForRanking = rows.map((r) => ({
+        challengeId: r.challengeId,
+        elapsedMs: r.elapsedMs!,
+      }));
+    }
+
+    const ranks = computeChallengeRanks(
+      bestPerChallenge,
+      allVerifiedForRanking
+    );
+
+    for (const [challengeId, info] of bestPerChallenge) {
+      const rank = ranks.get(challengeId) ?? 1;
       if (
         bestResult === null ||
         rank < bestResult.rank ||
@@ -236,6 +262,12 @@ export default async function LeaderboardPage() {
                         </th>
                         <th
                           scope='col'
+                          className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'
+                        >
+                          Score
+                        </th>
+                        <th
+                          scope='col'
                           aria-sort='ascending'
                           className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'
                         >
@@ -314,6 +346,14 @@ export default async function LeaderboardPage() {
                                     You
                                   </span>
                                 )}
+                              </span>
+                            </td>
+                            <td className='px-6 py-4 whitespace-nowrap'>
+                              <span
+                                className='text-sm font-medium text-gray-900 dark:text-gray-100'
+                                style={{ fontVariantNumeric: 'tabular-nums' }}
+                              >
+                                {run.score !== null ? run.score : '—'}
                               </span>
                             </td>
                             <td

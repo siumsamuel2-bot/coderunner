@@ -13,6 +13,8 @@ export default async function Home() {
     ...challenge,
     attemptCount: 0,
     fastestVerifiedMs: null,
+    bestScore: null,
+    timeLimitMinutes: null,
   }));
 
   return (

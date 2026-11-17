@@ -262,6 +262,14 @@ export default async function RunResultsPage({
             </div>
             <div>
               <p className='text-xs font-medium text-gray-500 dark:text-gray-400 mb-1'>
+                Score
+              </p>
+              <p className='text-gray-900 dark:text-gray-100'>
+                {run.score !== null ? `${run.score} / 1000` : '—'}
+              </p>
+            </div>
+            <div>
+              <p className='text-xs font-medium text-gray-500 dark:text-gray-400 mb-1'>
                 Rank
               </p>
               <p className='text-gray-900 dark:text-gray-100'>

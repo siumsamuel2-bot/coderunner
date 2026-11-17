@@ -10,6 +10,7 @@ export interface LeaderboardRun {
   userId: string;
   challengeId: string;
   elapsedMs: number | null;
+  score: number | null;
   endedAt: Date | null;
   user: { id: string; name: string | null; image: string | null };
   challenge: {
@@ -72,6 +73,42 @@ export function groupByChallenge(
         .slice(0, cap),
     }))
     .sort((a, b) => a.challenge.title.localeCompare(b.challenge.title));
+}
+
+/**
+ * Compute per-challenge rank for a user's best verified runs (§2.4).
+ *
+ * Given the user's fastest verified run per challenge and ALL verified runs
+ * for those challenges, returns a map of challengeId -> rank, where rank =
+ * 1 + count of verified runs faster than the user's best on that challenge.
+ *
+ * Replaces the N+1 pattern of issuing one `prisma.run.count()` per
+ * challenge. Callers fetch all relevant verified runs in a single query
+ * and pass them here, so rank computation is O(1) DB queries.
+ *
+ * Ties: runs with equal elapsedMs are not "faster", so they don't add to
+ * the count — matching the leaderboard's sort-by-time-asc semantics.
+ */
+export function computeChallengeRanks(
+  userBests: Map<string, { elapsedMs: number }>,
+  allVerifiedRuns: Array<{ challengeId: string; elapsedMs: number }>
+): Map<string, number> {
+  const timesByChallenge = new Map<string, number[]>();
+  for (const run of allVerifiedRuns) {
+    const list = timesByChallenge.get(run.challengeId) ?? [];
+    list.push(run.elapsedMs);
+    timesByChallenge.set(run.challengeId, list);
+  }
+  for (const times of timesByChallenge.values()) {
+    times.sort((a, b) => a - b);
+  }
+  const ranks = new Map<string, number>();
+  for (const [challengeId, best] of userBests) {
+    const times = timesByChallenge.get(challengeId) ?? [];
+    const faster = times.filter((t) => t < best.elapsedMs).length;
+    ranks.set(challengeId, faster + 1);
+  }
+  return ranks;
 }
 
 /**

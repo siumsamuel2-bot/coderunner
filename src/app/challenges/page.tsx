@@ -9,26 +9,47 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Challenges listing (SPE-131). Server component fetches the catalog plus
- * real per-challenge stats (attempt count, fastest verified completion)
- * computed from the runs table; the client component handles filtering.
- * Only backend-backed metrics are rendered — nothing is invented.
+ * real per-challenge stats (attempt count, fastest verified completion,
+ * best verified score) computed from the runs table; the client component
+ * handles filtering. Only backend-backed metrics are rendered — nothing is
+ * invented.
  */
 export default async function ChallengesPage() {
   const [challenges, runs] = await Promise.all([
-    prisma.challenge.findMany(),
+    prisma.challenge.findMany({
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        description: true,
+        difficulty: true,
+        language: true,
+        category: true,
+        aiAllowed: true,
+        estimatedMinutes: true,
+        timeLimitMinutes: true,
+      },
+    }),
     prisma.run.findMany({
-      select: { challengeId: true, status: true, elapsedMs: true },
+      select: { challengeId: true, status: true, elapsedMs: true, score: true },
     }),
   ]);
 
   const attemptCounts = new Map<string, number>();
   const fastestVerified = new Map<string, number>();
+  const bestScores = new Map<string, number>();
   for (const run of runs) {
     attemptCounts.set(run.challengeId, (attemptCounts.get(run.challengeId) ?? 0) + 1);
     if (run.status === 'verified' && run.elapsedMs !== null) {
       const current = fastestVerified.get(run.challengeId);
       if (current === undefined || run.elapsedMs < current) {
         fastestVerified.set(run.challengeId, run.elapsedMs);
+      }
+    }
+    if (run.status === 'verified' && run.score !== null) {
+      const current = bestScores.get(run.challengeId);
+      if (current === undefined || run.score > current) {
+        bestScores.set(run.challengeId, run.score);
       }
     }
   }
@@ -43,8 +64,10 @@ export default async function ChallengesPage() {
     category: challenge.category,
     aiAllowed: challenge.aiAllowed,
     estimatedMinutes: challenge.estimatedMinutes,
+    timeLimitMinutes: challenge.timeLimitMinutes ?? null,
     attemptCount: attemptCounts.get(challenge.id) ?? 0,
     fastestVerifiedMs: fastestVerified.get(challenge.id) ?? null,
+    bestScore: bestScores.get(challenge.id) ?? null,
   }));
 
   return (

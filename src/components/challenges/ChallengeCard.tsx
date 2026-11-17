@@ -38,23 +38,44 @@ export function ChallengeCard({ challenge }: { challenge: ChallengeListItem }) {
 
           <div className='mb-3 flex flex-wrap items-center gap-2 text-sm'>
             <DifficultyBadge difficulty={challenge.difficulty} />
-            <span className='inline-flex items-center gap-1 text-gray-600 dark:text-gray-400'>
-              <svg
-                aria-hidden='true'
-                className='h-4 w-4'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth='2'
-                  d='M12 8v4l3 3'
-                />
-              </svg>
-              ~{challenge.estimatedMinutes} min
-            </span>
+            {challenge.timeLimitMinutes !== null && (
+              <span className='inline-flex items-center gap-1 text-gray-600 dark:text-gray-400'>
+                <svg
+                  aria-hidden='true'
+                  className='h-4 w-4'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth='2'
+                    d='M12 8v4l3 3'
+                  />
+                </svg>
+                {challenge.timeLimitMinutes} min limit
+              </span>
+            )}
+            {challenge.timeLimitMinutes === null && (
+              <span className='inline-flex items-center gap-1 text-gray-600 dark:text-gray-400'>
+                <svg
+                  aria-hidden='true'
+                  className='h-4 w-4'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth='2'
+                    d='M12 8v4l3 3'
+                  />
+                </svg>
+                ~{challenge.estimatedMinutes} min est.
+              </span>
+            )}
           </div>
 
           <div className='mb-4 text-xs text-gray-500 dark:text-gray-500'>
@@ -68,6 +89,15 @@ export function ChallengeCard({ challenge }: { challenge: ChallengeListItem }) {
                     · fastest verified{' '}
                     <span className='font-medium text-gray-700 dark:text-gray-300'>
                       {formatDuration(challenge.fastestVerifiedMs)}
+                    </span>
+                  </>
+                )}
+                {challenge.bestScore !== null && (
+                  <>
+                    {' '}
+                    · best score{' '}
+                    <span className='font-medium text-indigo-600 dark:text-indigo-400'>
+                      {challenge.bestScore} / 1000
                     </span>
                   </>
                 )}

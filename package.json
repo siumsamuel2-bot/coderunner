@@ -10,6 +10,7 @@
         "build": "prisma generate && next build --webpack",
         "db:check": "tsx scripts/db-check.ts",
         "verification-worker": "tsx scripts/verification-worker.ts",
+    "heartbeat": "node scripts/heartbeat.ts",
         "dev": "next dev",
         "cf:build": "opennextjs-cloudflare build",
         "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
