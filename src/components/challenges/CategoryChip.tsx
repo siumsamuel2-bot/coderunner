@@ -7,6 +7,7 @@ import { capitalizeLabel } from '@/lib/format';
 export function CategoryChip({ category }: { category: string }) {
   return (
     <span
+      aria-label={`Category: ${capitalizeLabel(category)}`}
       title={category}
       className='inline-flex max-w-[10rem] items-center truncate rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300'
     >

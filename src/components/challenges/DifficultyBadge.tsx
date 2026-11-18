@@ -25,6 +25,7 @@ export function DifficultyBadge({ difficulty }: { difficulty: string }) {
   const dotStyle = DIFFICULTY_DOT_STYLES[difficulty] ?? FALLBACK_DOT_STYLE;
   return (
     <span
+      aria-label={`Difficulty: ${capitalizeLabel(difficulty)}`}
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${style}`}
     >
       <span aria-hidden='true' className={`h-1.5 w-1.5 rounded-full ${dotStyle}`} />
