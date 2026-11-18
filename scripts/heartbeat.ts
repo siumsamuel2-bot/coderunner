@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-
 // Simple heartbeat script to periodically ping the health endpoint.
 // If HEALTH_URL env var is set, it will use that URL; otherwise falls back to localhost.
 const healthUrl = process.env.HEALTH_URL ?? 'http://localhost:3000/api/health';
