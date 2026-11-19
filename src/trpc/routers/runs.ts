@@ -37,7 +37,7 @@ export const runsRouter = router({
     .query(async ({ ctx, input }) => {
       return ctx.prisma.run.findMany({
         where: { challengeId: input.challengeId },
-        orderBy: { elapsedMs: 'asc' },
+        orderBy: { score: 'desc', elapsedMs: 'asc' },
       });
     }),
   getLeaderboard: procedure
@@ -64,18 +64,48 @@ export const runsRouter = router({
       return ctx.prisma.run.findMany({
         where: {
           status: 'verified',
-          elapsedMs: { not: null },
+          score: { not: null },
           ...(periodFilter ? { createdAt: { gte: periodFilter } } : {}),
           ...(input?.challengeId ? { challengeId: input.challengeId } : {}),
         },
         include: {
           user: {
-            select: { id: true, name: true, image: true },
+            select: { id: true, name: true, image: true, username: true },
           },
           challenge: true,
           verification: true,
+          speedrun: true,
         },
-        orderBy: { elapsedMs: 'asc' },
+        orderBy: [{ score: 'desc' }, { elapsedMs: 'asc' }],
+        take: 50,
+      });
+    }),
+  getWorldRecords: procedure
+    .input(z.object({ challengeId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.worldRecord.findMany({
+        where: {
+          ...(input?.challengeId ? { challengeId: input.challengeId } : {}),
+        },
+        include: {
+          user: {
+            select: { id: true, name: true, image: true, username: true },
+          },
+          challenge: true,
+        },
+        orderBy: [{ score: 'desc' }],
+        take: 50,
+      });
+    }),
+  getPersonalRecords: procedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.personalRecord.findMany({
+        where: { userId: input.userId },
+        include: {
+          challenge: true,
+        },
+        orderBy: [{ bestScore: 'desc' }],
         take: 50,
       });
     }),

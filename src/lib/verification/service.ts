@@ -5,6 +5,27 @@ import { mkdir } from 'node:fs/promises';
 
 type HarnessChallengeId = Parameters<typeof runVerification>[0]['challengeId'];
 
+const BASE_SCORE_MAX = 600;
+
+function computeBaseScore(passed: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.round(BASE_SCORE_MAX * (passed / total));
+}
+
+function computeTimeFactor(elapsedMs: number, timeLimitMs: number): number {
+  const twoXLimit = timeLimitMs * 2;
+  return Math.max(0, 1 - elapsedMs / twoXLimit);
+}
+
+function computeScore(
+  baseScore: number,
+  completionFactor: number,
+  timeFactor: number,
+  antiCheatMultiplier: number
+): number {
+  return Math.round(baseScore * completionFactor * timeFactor * antiCheatMultiplier);
+}
+
 export async function triggerVerification(options: {
   challengeId: string;
   targetUrl: string;
@@ -92,18 +113,29 @@ export async function processVerificationResults(
     const timeLimitMs = run.challenge.estimatedMinutes * 60 * 1000;
     const withinTimeLimit = (report.durationMs || 0) <= timeLimitMs;
     
-    // Compute score: base 1000, minus 1 point per second, floored at 0
-    const elapsedSeconds = Math.ceil((report.durationMs || 0) / 1000);
-    const score = passed && withinTimeLimit ? Math.max(0, 1000 - elapsedSeconds) : null;
+    // Compute scoring components
+    const passedCount = report.summary?.passed ?? 0;
+    const totalCount = (report.summary?.passed ?? 0) + (report.summary?.failed ?? 0) + (report.summary?.skipped ?? 0);
+    const baseScore = computeBaseScore(passedCount, totalCount);
+    const completionFactor = passed ? 1.0 : passedCount / Math.max(totalCount, 1);
+    const timeFactor = computeTimeFactor(report.durationMs || 0, timeLimitMs);
+    const antiCheatMultiplier = 1.0; // Clean run, no anomalies detected
     
-    // Update the run with verification results
+    const score = computeScore(baseScore, completionFactor, timeFactor, antiCheatMultiplier);
+    
+    // Update the run with verification results and score breakdown
     await prisma.run.update({
       where: { id: runId },
       data: {
         status: passed && withinTimeLimit ? 'verified' : 'failed',
         endedAt: new Date(report.finishedAt),
         elapsedMs: report.durationMs || 0,
-        score,
+        score: passed && withinTimeLimit ? score : null,
+        baseScore: passed && withinTimeLimit ? baseScore : null,
+        completionFactor: passed && withinTimeLimit ? completionFactor : null,
+        timeFactor: passed && withinTimeLimit ? timeFactor : null,
+        antiCheatMultiplier: passed && withinTimeLimit ? antiCheatMultiplier : null,
+        verifiedAt: passed && withinTimeLimit ? new Date() : null,
       },
     });
     
@@ -132,6 +164,13 @@ export async function processVerificationResults(
         testOutput: testOutput,
       },
     });
+    
+    // If verified, create/update speedrun, world record, and personal record
+    if (passed && withinTimeLimit && score !== null && run.elapsedMs !== null) {
+      await createOrUpdateSpeedrun(run, score);
+      await createOrUpdateWorldRecord(run, score);
+      await createOrUpdatePersonalRecord(run, score);
+    }
   } catch (error) {
     console.error(`Error processing verification results for run ${runId}:`, error);
     // Update run status to failed if there was an error processing results
@@ -147,4 +186,194 @@ export async function processVerificationResults(
       console.error(`Failed to update run status to failed for run ${runId}:`, updateError);
     }
   }
+}
+
+async function createOrUpdateSpeedrun(run: {
+  id: string;
+  userId: string;
+  challengeId: string;
+  score: number | null;
+  elapsedMs: number | null;
+}, score: number): Promise<void> {
+  const elapsedMs = run.elapsedMs ?? 0;
+  
+  // Get total verified runs for this challenge to compute percentile
+  const totalRuns = await prisma.run.count({
+    where: {
+      challengeId: run.challengeId,
+      status: 'verified',
+      score: { not: null },
+    },
+  });
+  
+  // Count runs with higher score (for rank)
+  const higherScoreCount = await prisma.run.count({
+    where: {
+      challengeId: run.challengeId,
+      status: 'verified',
+      score: { gt: score },
+    },
+  });
+  
+  // Count runs with same score but lower elapsedMs (tiebreaker)
+  const sameScoreFasterCount = await prisma.run.count({
+    where: {
+      challengeId: run.challengeId,
+      status: 'verified',
+      score,
+      elapsedMs: { lt: elapsedMs },
+    },
+  });
+  
+  const rank = higherScoreCount + sameScoreFasterCount + 1;
+  const percentile = totalRuns > 0
+    ? 100 * ((totalRuns - rank) + 0.5) / totalRuns
+    : 100;
+  
+  // Check if this is a world record (best score ever for this challenge)
+  const bestScoreRun = await prisma.run.findFirst({
+    where: {
+      challengeId: run.challengeId,
+      status: 'verified',
+      score: { not: null },
+    },
+    orderBy: [{ score: 'desc' }, { elapsedMs: 'asc' }],
+    take: 1,
+    select: { id: true, score: true, elapsedMs: true },
+  });
+  
+  const isWorldRecord = bestScoreRun?.id === run.id;
+  
+  await prisma.speedrun.upsert({
+    where: {
+      challengeId_userId: {
+        challengeId: run.challengeId,
+        userId: run.userId,
+      },
+    },
+    update: {
+      score,
+      elapsedMs,
+      rank,
+      percentile,
+      isWorldRecord,
+      achievedAt: new Date(),
+    },
+    create: {
+      score,
+      elapsedMs,
+      rank,
+      percentile,
+      isWorldRecord,
+      achievedAt: new Date(),
+      challengeId: run.challengeId,
+      userId: run.userId,
+      runId: run.id,
+    },
+  });
+}
+
+async function createOrUpdateWorldRecord(run: {
+  id: string;
+  userId: string;
+  challengeId: string;
+  score: number | null;
+  elapsedMs: number | null;
+}, score: number): Promise<void> {
+  const elapsedMs = run.elapsedMs ?? 0;
+  
+  // Check if this beats the current world record for this challenge (overall category)
+  const currentWR = await prisma.worldRecord.findFirst({
+    where: {
+      challengeId: run.challengeId,
+      category: 'overall',
+    },
+    orderBy: [{ score: 'desc' }, { elapsedMs: 'asc' }],
+    take: 1,
+  });
+  
+  const beatsWR = !currentWR || score > currentWR.score || (score === currentWR.score && elapsedMs < currentWR.elapsedMs);
+  
+  if (beatsWR) {
+    // Remove old overall WR flag from speedruns if needed
+    await prisma.speedrun.updateMany({
+      where: {
+        challengeId: run.challengeId,
+        isWorldRecord: true,
+      },
+      data: {
+        isWorldRecord: false,
+      },
+    });
+    
+    // Create or update world record
+    await prisma.worldRecord.upsert({
+      where: {
+        challengeId_category: {
+          challengeId: run.challengeId,
+          category: 'overall',
+        },
+      },
+      update: {
+        score,
+        elapsedMs,
+        userId: run.userId,
+        runId: run.id,
+        achievedAt: new Date(),
+      },
+      create: {
+        score,
+        elapsedMs,
+        userId: run.userId,
+        runId: run.id,
+        achievedAt: new Date(),
+        category: 'overall',
+        challengeId: run.challengeId,
+      },
+    });
+    
+    // Mark the speedrun as world record
+    await prisma.speedrun.update({
+      where: {
+        challengeId_userId: {
+          challengeId: run.challengeId,
+          userId: run.userId,
+        },
+      },
+      data: {
+        isWorldRecord: true,
+      },
+    });
+  }
+}
+
+async function createOrUpdatePersonalRecord(run: {
+  id: string;
+  userId: string;
+  challengeId: string;
+  score: number | null;
+  elapsedMs: number | null;
+}, score: number): Promise<void> {
+  const elapsedMs = run.elapsedMs ?? 0;
+  
+    await prisma.personalRecord.upsert({
+    where: {
+      userId_challengeId: {
+        userId: run.userId,
+        challengeId: run.challengeId,
+      },
+    },
+    update: {
+      bestScore: score,
+      bestElapsedMs: elapsedMs,
+      updatedAt: new Date(),
+    },
+    create: {
+      bestScore: score,
+      bestElapsedMs: elapsedMs,
+      updatedAt: new Date(),
+      userId: run.userId,
+      challengeId: run.challengeId,
+    },
+  });
 }

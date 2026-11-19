@@ -10,14 +10,19 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   name          String?
+  username      String?   @unique
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  clerkId       String?   @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   accounts      Account[]
   sessions      Session[]
   runs          Run[]
+  speedruns     Speedrun[]
+  worldRecords  WorldRecord[]
+  personalRecords PersonalRecord[]
 }
 
 model Account {
@@ -73,26 +78,96 @@ model Challenge {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   runs               Run[]
+  speedruns          Speedrun[]
+  worldRecords       WorldRecord[]
+  personalRecords    PersonalRecord[]
   verificationJobs   VerificationJob[]
 }
 
 model Run {
-  id          String    @id @default(cuid())
-  userId      String
+  id                 String    @id @default(cuid())
+  userId             String
+  challengeId        String
+  status             String    @default("submitted") // submitted, verifying, verified, rejected, abandoned
+  startedAt          DateTime  @default(now())
+  endedAt            DateTime?
+  elapsedMs          Int?
+  score              Int?
+  baseScore          Int?
+  completionFactor   Float?
+  timeFactor         Float?
+  antiCheatMultiplier Float?
+  submittedAt        DateTime  @default(now())
+  verifiedAt         DateTime?
+  promptChain        Json?
+  toolLog            Json?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge          Challenge     @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  verification       Verification?
+  verificationJobs   VerificationJob[]
+  speedrun           Speedrun?
+  worldRecords       WorldRecord[]
+
+  @@index([userId, challengeId])
+  @@index([challengeId, status])
+  @@index([status, submittedAt])
+}
+
+model Speedrun {
+  id                 String   @id @default(cuid())
+  runId              String   @unique
+  challengeId        String
+  userId             String
+  score              Int
+  elapsedMs          Int
+  rank               Int
+  percentile         Float
+  isWorldRecord      Boolean  @default(false)
+  achievedAt         DateTime @default(now())
+
+  run           Run      @relation(fields: [runId], references: [id])
+  challenge     Challenge @relation(fields: [challengeId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@unique([challengeId, userId])
+  @@index([challengeId, score])
+  @@index([challengeId, elapsedMs])
+  @@index([challengeId, rank])
+}
+
+model WorldRecord {
+  id          String   @id @default(cuid())
   challengeId String
-  status      String    @default("in_progress")
-  startedAt   DateTime  @default(now())
-  endedAt     DateTime?
-  elapsedMs   Int?
-  score       Int?
-  promptChain Json?
-  toolLog     Json?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  challenge   Challenge     @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  verification Verification?
-  verificationJobs VerificationJob[]
+  score       Int
+  elapsedMs   Int
+  userId      String
+  runId       String
+  achievedAt  DateTime @default(now())
+  category    String   // overall, by-language, by-difficulty
+
+  challenge  Challenge @relation(fields: [challengeId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+  run        Run      @relation(fields: [runId], references: [id])
+
+  @@unique([challengeId, category])
+  @@index([challengeId, category, score])
+}
+
+model PersonalRecord {
+  id            String   @id @default(cuid())
+  userId        String
+  challengeId   String
+  bestScore     Int
+  bestElapsedMs Int
+  updatedAt     DateTime @default(now())
+
+  user   User     @relation(fields: [userId], references: [id])
+  challenge Challenge @relation(fields: [challengeId], references: [id])
+
+  @@unique([userId, challengeId])
+  @@index([userId, bestScore])
 }
 
 model Verification {

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 
 type LeaderboardRun = {
   id: string;
-  user: { id: string; name: string | null; image: string | null } | null;
+  user: { id: string; name: string | null; image: string | null; username: string | null } | null;
   challenge: { slug: string; title: string };
   elapsedMs: number | null;
   score: number | null;
@@ -19,6 +19,12 @@ type LeaderboardRun = {
   } | null;
   promptChain: unknown | null;
   toolLog: unknown | null;
+  speedrun: {
+    id: string;
+    rank: number;
+    percentile: number;
+    isWorldRecord: boolean;
+  } | null;
 };
 
 type Medal = 'gold' | 'silver' | 'bronze';
@@ -107,7 +113,7 @@ export function LeaderboardTable({ runs, currentUserId }: { runs: LeaderboardRun
         </thead>
         <tbody className='bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700'>
           {runs.map((run, idx) => {
-            const rank = idx + 1;
+            const rank = run.speedrun?.rank ?? idx + 1;
             const medal = medalForRank(rank);
             const badge = verificationBadge(run);
             const isCurrentUser = !!currentUserId && run.user?.id === currentUserId;
@@ -133,20 +139,26 @@ export function LeaderboardTable({ runs, currentUserId }: { runs: LeaderboardRun
                 className={rowClass}
               >
                 <td className='px-6 py-4 whitespace-nowrap text-sm font-medium'>
-                  {medal ? (
-                    <span
-                      className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold shadow-sm ${
-                        medal === 'gold'
-                          ? 'bg-yellow-300 text-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-300'
-                          : medal === 'silver'
-                            ? 'bg-gray-300 text-gray-900 dark:bg-gray-700/20 dark:text-gray-300'
-                            : 'bg-orange-300 text-orange-900 dark:bg-orange-900/20 dark:text-orange-300'
-                      }`}
-                    >
-                      {medalLabel(rank)}
+                  {run.speedrun?.isWorldRecord ? (
+                    <span className='inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-500 text-amber-900 shadow-sm'>
+                      <span className='text-xs font-bold'>WR</span>
                     </span>
                   ) : (
-                    <span className='text-gray-500 dark:text-gray-400'>{rank}</span>
+                    medal ? (
+                      <span
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold shadow-sm ${
+                          medal === 'gold'
+                            ? 'bg-yellow-300 text-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-300'
+                            : medal === 'silver'
+                              ? 'bg-gray-300 text-gray-900 dark:bg-gray-700/20 dark:text-gray-300'
+                              : 'bg-orange-300 text-orange-900 dark:bg-orange-900/20 dark:text-orange-300'
+                        }`}
+                      >
+                        {medalLabel(run.speedrun?.rank ?? rank)}
+                      </span>
+                    ) : (
+                      <span className='text-gray-500 dark:text-gray-400'>{run.speedrun?.rank ?? rank}</span>
+                    )
                   )}
                 </td>
                 <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100'>
@@ -174,7 +186,15 @@ export function LeaderboardTable({ runs, currentUserId }: { runs: LeaderboardRun
                   </span>
                 </td>
                 <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 font-medium'>
-                  {run.score !== null ? run.score : 'N/A'}
+                  {run.score !== null ? (
+                    <>
+                      {run.score}
+                      <br />
+                      <span className='text-xs text-gray-500 dark:text-gray-400'>
+                        {run.speedrun?.percentile != null ? `${run.speedrun!.percentile.toFixed(1)}%ile` : ''}
+                      </span>
+                    </>
+                  ) : 'N/A'}
                 </td>
                 <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 font-mono'>
                   {run.elapsedMs !== null
