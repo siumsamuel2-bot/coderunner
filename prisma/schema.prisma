@@ -27,7 +27,6 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  clerkId       String?   @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   runs          Run[]
@@ -52,11 +51,8 @@ model Challenge {
   category           String   @default("general")
   aiAllowed          Boolean  @default(true)
   estimatedMinutes   Int
-  category           String   @default("General")
-  language           String   @default("JavaScript")
   testSpec           Json
   acceptanceCriteria String
-  aiAllowed          Boolean @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   runs               Run[]

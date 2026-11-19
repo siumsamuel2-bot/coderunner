@@ -74,6 +74,10 @@ function SubmittedCell({ endedAt }: { endedAt: Date | null }) {
   );
 }
 
+function createLeaderboardUrl(period: string): string {
+  return `/leaderboard?period=${period}`;
+}
+
 /**
  * Leaderboard (SPE-135, from the SPE-127 spec §2). One rank per player
  * (best-per-user dedup, dep D2), per-challenge anchored sections, top-3
@@ -82,10 +86,21 @@ function SubmittedCell({ endedAt }: { endedAt: Date | null }) {
  * score column (scoring v1, dep D3, not implemented — the column is absent,
  * not dashed).
  */
-export default async function LeaderboardPage() {
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams?: { period?: string };
+}) {
   const [session, verifiedRuns] = await Promise.all([
     auth(),
-    serverTrpc.runs.getLeaderboard(),
+    serverTrpc.runs.getLeaderboard({
+      challengeId: undefined,
+      period: (searchParams?.period ?? 'all-time') as
+        | 'all-time'
+        | '24h'
+        | '7d'
+        | '30d',
+    }),
   ]);
 
   const currentUserId = session?.user?.id ?? null;
@@ -167,6 +182,49 @@ export default async function LeaderboardPage() {
         </p>
         <div className='mb-8 flex justify-center'>
           <VerificationTrustLine href='#how-verification-works' />
+        </div>
+
+        <div className='mb-8 flex justify-center gap-2'>
+          <Link
+            href={createLeaderboardUrl('all-time')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              searchParams?.period ?? 'all-time' === 'all-time'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            All time
+          </Link>
+          <Link
+            href={createLeaderboardUrl('24h')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              searchParams?.period === '24h'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            Past 24h
+          </Link>
+          <Link
+            href={createLeaderboardUrl('7d')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              searchParams?.period === '7d'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            Past 7 days
+          </Link>
+          <Link
+            href={createLeaderboardUrl('30d')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              searchParams?.period === '30d'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            Past 30 days
+          </Link>
         </div>
 
         {bestResult && (
