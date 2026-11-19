@@ -29,7 +29,7 @@ export function SubmitRunForm({
 
     try {
       if (!userId) {
-        window.location.href = '/auth/signin';
+        router.push('/auth/signin');
         return;
       }
 
