@@ -2,69 +2,72 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { addVerificationJob } from '@/lib/verification/queue';
+import { auth } from '@/auth';
 
+/**
+ * POST /api/runs
+ *
+ * Server-side run submit (SPE-119). The client must first call
+ * POST /api/runs/start to create an in_progress run. This endpoint
+ * computes elapsedMs server-side (now - startedAt), transitions the
+ * run to `submitted`, and queues verification. The client never
+ * sends timing — elapsedMs is provably from DB timestamps.
+ */
 export async function POST(request: Request) {
-  try {
-    const { userId, challengeId, solutionUrl } = await request.json();
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    // Validate input
-    if (!userId || !challengeId || !solutionUrl) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Verify user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Verify challenge exists
-    const challenge = await prisma.challenge.findUnique({
-      where: { id: challengeId },
-    });
-
-    if (!challenge) {
-      return NextResponse.json(
-        { error: 'Challenge not found' },
-        { status: 404 }
-      );
-    }
-
-    // Create the run
-    const run = await prisma.run.create({
-      data: {
-        userId,
-        challengeId,
-        status: 'submitted', // Will be updated after verification
-        startedAt: new Date(),
-        toolLog: { solutionUrl: solutionUrl },
-      },
-    });
-
-    // Add verification job to the queue
-    await addVerificationJob({
-      challengeId: challenge.id,
-      targetUrl: solutionUrl,
-      runId: run.id,
-    });
-
-    return NextResponse.json(run, { status: 201 });
-  } catch (error) {
-    console.error('Error creating run:', error);
+  const { runId, solutionUrl } = await request.json();
+  if (!runId || !solutionUrl) {
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: 'Missing runId or solutionUrl' },
+      { status: 400 }
     );
   }
+
+  const userId = session.user.id;
+
+  const run = await prisma.run.findUnique({
+    where: { id: runId },
+  });
+
+  if (!run) {
+    return NextResponse.json({ error: 'Run not found' }, { status: 404 });
+  }
+
+  if (run.userId !== userId) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  if (run.status !== 'in_progress') {
+    return NextResponse.json(
+      { error: `Run is not in_progress (current: ${run.status})` },
+      { status: 409 }
+    );
+  }
+
+  // Server-side timing: submit - start. Client never sends elapsedMs.
+  const elapsedMs = Math.max(0, Date.now() - run.startedAt.getTime());
+
+  const updated = await prisma.run.update({
+    where: { id: runId },
+    data: {
+      status: 'submitted',
+      elapsedMs,
+      toolLog: { solutionUrl },
+    },
+  });
+
+  // Add verification job to the queue
+  await addVerificationJob({
+    challengeId: run.challengeId,
+    targetUrl: solutionUrl,
+    runId: run.id,
+  });
+
+  return NextResponse.json(updated, { status: 200 });
 }
 
 export async function GET(request: Request) {

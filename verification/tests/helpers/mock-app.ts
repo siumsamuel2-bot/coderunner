@@ -375,6 +375,139 @@ function chatHtml(): string {
 }
 
 /* ------------------------------------------------------------------ */
+/* Python String Lab (SPE-109)                                         */
+/* ------------------------------------------------------------------ */
+
+function stringLabHtml(): string {
+  return page(
+    'String Lab',
+    `<main>
+  <h1>String Lab</h1>
+  <input id="text" type="text" placeholder="Enter a string or phrase">
+  <button id="rev">Reverse</button>
+  <button id="up">Uppercase</button>
+  <button id="low">Lowercase</button>
+  <button id="wc">Word count</button>
+  <button id="pal">Palindrome</button>
+  <div id="result"></div>
+</main>
+<script>
+(function () {
+  var input = document.getElementById('text');
+  var result = document.getElementById('result');
+  function show(label, value) {
+    var line = document.createElement('div');
+    line.textContent = label + ': ' + value;
+    result.appendChild(line);
+  }
+  document.getElementById('rev').addEventListener('click', function () {
+    show('Reverse', input.value.split('').reverse().join(''));
+  });
+  document.getElementById('up').addEventListener('click', function () {
+    show('Uppercase', input.value.toUpperCase());
+  });
+  document.getElementById('low').addEventListener('click', function () {
+    show('Lowercase', input.value.toLowerCase());
+  });
+  document.getElementById('wc').addEventListener('click', function () {
+    var words = input.value.trim().split(/\\s+/).filter(function (w) { return w.length > 0; });
+    show('Words', String(words.length));
+  });
+  document.getElementById('pal').addEventListener('click', function () {
+    var v = input.value;
+    var isPal = v.length > 0 && v === v.split('').reverse().join('');
+    show('Palindrome', isPal ? 'yes' : 'no');
+  });
+})();
+</script>`);
+}
+
+/* ------------------------------------------------------------------ */
+/* Python JSON Forge (SPE-109)                                         */
+/* ------------------------------------------------------------------ */
+
+function jsonForgeHtml(): string {
+  return page(
+    'JSON Forge',
+    `<main>
+  <h1>JSON Forge</h1>
+  <textarea id="json" rows="6" cols="50" placeholder="Paste JSON here"></textarea>
+  <button id="pretty">Prettify</button>
+  <button id="mini">Minify</button>
+  <button id="sort">Sort keys</button>
+  <pre id="result"></pre>
+</main>
+<script>
+(function () {
+  var input = document.getElementById('json');
+  var result = document.getElementById('result');
+  function parse() {
+    try { return { ok: true, value: JSON.parse(input.value) }; }
+    catch (e) { return { ok: false, value: null }; }
+  }
+  function sortKeys(obj) {
+    if (Array.isArray(obj)) { return obj.map(sortKeys); }
+    if (obj !== null && typeof obj === 'object') {
+      var out = {};
+      Object.keys(obj).sort().forEach(function (k) { out[k] = sortKeys(obj[k]); });
+      return out;
+    }
+    return obj;
+  }
+  document.getElementById('pretty').addEventListener('click', function () {
+    var r = parse();
+    result.textContent = r.ok ? JSON.stringify(r.value, null, 2) : 'Error: invalid JSON';
+  });
+  document.getElementById('mini').addEventListener('click', function () {
+    var r = parse();
+    result.textContent = r.ok ? JSON.stringify(r.value) : 'Error: invalid JSON';
+  });
+  document.getElementById('sort').addEventListener('click', function () {
+    var r = parse();
+    result.textContent = r.ok ? JSON.stringify(sortKeys(r.value), null, 2) : 'Error: invalid JSON';
+  });
+})();
+</script>`);
+}
+
+/* ------------------------------------------------------------------ */
+/* Python Link Shortener (SPE-109)                                     */
+/* ------------------------------------------------------------------ */
+
+function linkShortenerHtml(): string {
+  return page(
+    'Link Shortener',
+    `<main>
+  <h1>Link Shortener</h1>
+  <input id="url" type="text" placeholder="Paste a URL to shorten">
+  <button id="go">Shorten</button>
+  <ul id="links"></ul>
+</main>
+<script>
+(function () {
+  var input = document.getElementById('url');
+  var links = document.getElementById('links');
+  document.getElementById('go').addEventListener('click', function () {
+    fetch('/api/shorten', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ url: input.value })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.href = d.short;
+        a.textContent = d.short;
+        li.appendChild(a);
+        links.appendChild(li);
+      });
+  });
+})();
+</script>`);
+}
+
+/* ------------------------------------------------------------------ */
 /* Server                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -385,15 +518,57 @@ const ROUTES: Record<string, () => string> = {
   '/calc-broken': () => calculatorHtml({ broken: true }),
   '/todo': () => todoHtml(),
   '/pdf': () => pdfHtml(),
-  '/chat': () => chatHtml()
+  '/chat': () => chatHtml(),
+  '/string-lab': () => stringLabHtml(),
+  '/json-forge': () => jsonForgeHtml(),
+  '/link-shortener': () => linkShortenerHtml()
 };
 
 export function startMockApp(): Promise<MockApp> {
+  const shortLinks = new Map<string, string>();
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://mock.test');
     if (url.pathname === '/json') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end('{"challenge":"json"}');
+      return;
+    }
+    if (url.pathname === '/api/shorten' && req.method === 'POST') {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString('utf8');
+      });
+      req.on('end', () => {
+        try {
+          const parsed = JSON.parse(body) as { url?: unknown };
+          const longUrl = typeof parsed.url === 'string' ? parsed.url : '';
+          if (!/^https?:\/\//.test(longUrl)) {
+            res.writeHead(400, { 'content-type': 'application/json' });
+            res.end('{"error":"invalid url"}');
+            return;
+          }
+          const code = Math.random().toString(36).slice(2, 8);
+          shortLinks.set(code, longUrl);
+          const origin = `http://${req.headers.host ?? 'mock.test'}`;
+          res.writeHead(200, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ short: `${origin}/s/${code}` }));
+        } catch {
+          res.writeHead(400, { 'content-type': 'application/json' });
+          res.end('{"error":"bad request"}');
+        }
+      });
+      return;
+    }
+    if (url.pathname.startsWith('/s/')) {
+      const code = url.pathname.slice(3);
+      const target = shortLinks.get(code);
+      if (target !== undefined) {
+        res.writeHead(302, { location: target });
+        res.end();
+        return;
+      }
+      res.writeHead(404, { 'content-type': 'text/plain' });
+      res.end('not found');
       return;
     }
     const handler = ROUTES[url.pathname] ?? (() => page('Not found', '<h1>404</h1>'));

@@ -1,17 +1,14 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as url from 'node:url';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { canLaunchBrowser } from '../src/core/browser.ts';
-import { runVerification } from '../src/cli.ts';
+import { main, runVerification } from '../src/cli.ts';
 import { hashReportBody } from '../src/core/report.ts';
 import type { CheckResult, VerificationReport } from '../src/core/types.ts';
 import { startMockApp } from './helpers/mock-app.ts';
 
-const execFileAsync = promisify(execFile);
 const ROOT_DIR = path.dirname(path.dirname(url.fileURLToPath(import.meta.url)));
 
 const hasBrowser = await canLaunchBrowser(true);
@@ -155,6 +152,45 @@ describe.skipIf(!hasBrowser).sequential('e2e: harness vs reference app', () => {
     expect(report.summary.requiredFailed).toBe(2);
   });
 
+  it('py-string-lab: PASS on the reference app', async () => {
+    const report = await runVerification({
+      challengeId: 'py-string-lab',
+      targetUrl: `${app.url}/string-lab`,
+      seed: 20261012,
+      outDir,
+      headless: true
+    });
+    assertReportShape(report, 20261012);
+    expect(report.verdict).toBe('pass');
+    expect(required(report).every((c) => c.status === 'pass')).toBe(true);
+  });
+
+  it('py-json-forge: PASS on the reference app', async () => {
+    const report = await runVerification({
+      challengeId: 'py-json-forge',
+      targetUrl: `${app.url}/json-forge`,
+      seed: 20261013,
+      outDir,
+      headless: true
+    });
+    assertReportShape(report, 20261013);
+    expect(report.verdict).toBe('pass');
+    expect(required(report).every((c) => c.status === 'pass')).toBe(true);
+  });
+
+  it('py-link-shortener: PASS on the reference app (create + redirect + persist)', async () => {
+    const report = await runVerification({
+      challengeId: 'py-link-shortener',
+      targetUrl: `${app.url}/link-shortener`,
+      seed: 20261014,
+      outDir,
+      headless: true
+    });
+    assertReportShape(report, 20261014);
+    expect(report.verdict).toBe('pass');
+    expect(required(report).every((c) => c.status === 'pass')).toBe(true);
+  });
+
   it('reproduces the exact same result when re-run with the same seed', async () => {
     const run = () =>
       runVerification({
@@ -186,68 +222,64 @@ describe('e2e: CLI process (arg parsing + exit codes)', () => {
   });
 
   it('list prints all 5 challenges and exits 0', async () => {
-    const { stdout } = await execFileAsync('node', ['src/cli.ts', 'list'], {
-      cwd: ROOT_DIR
+    const logs: string[] = [];
+    const logSpy = vi.spyOn(console, 'log').mockImplementation((msg: unknown) => {
+      logs.push(String(msg));
     });
-    expect(stdout).toContain('calculator');
-    expect(stdout).toContain('todo-auth');
-    expect(stdout).toContain('pdf-analyzer');
-    expect(stdout).toContain('landing-page');
-    expect(stdout).toContain('chatbot');
+    try {
+      const exitCode = await main(['list']);
+      expect(exitCode).toBe(0);
+      const output = logs.join('\n');
+      expect(output).toContain('calculator');
+      expect(output).toContain('todo-auth');
+      expect(output).toContain('pdf-analyzer');
+      expect(output).toContain('landing-page');
+      expect(output).toContain('chatbot');
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it.skipIf(!hasBrowser)('verify exits 0 when the submission passes', async () => {
     const outDir = await fs.mkdtemp(path.join(os.tmpdir(), 'vf-cli-'));
-    const { stdout } = await execFileAsync(
-      'node',
-      [
-        'src/cli.ts',
-        'verify',
-        '--challenge',
-        'calculator',
-        '--target',
-        `${app.url}/calc`,
-        '--seed',
-        '5',
-        '--out',
-        outDir
-      ],
-      { cwd: ROOT_DIR }
-    );
-    expect(stdout).toContain('verdict        : PASS');
+    const exitCode = await main([
+      'verify',
+      '--challenge',
+      'calculator',
+      '--target',
+      `${app.url}/calc`,
+      '--seed',
+      '5',
+      '--out',
+      outDir
+    ]);
+    expect(exitCode).toBe(0);
   }, 120_000);
 
   it.skipIf(!hasBrowser)('verify exits 1 when a required check fails', async () => {
     const outDir = await fs.mkdtemp(path.join(os.tmpdir(), 'vf-cli-'));
-    const exit = await execFileAsync(
-      'node',
-      [
-        'src/cli.ts',
-        'verify',
-        '--challenge',
-        'calculator',
-        '--target',
-        `${app.url}/calc-broken`,
-        '--seed',
-        '6',
-        '--out',
-        outDir
-      ],
-      { cwd: ROOT_DIR }
-    ).then(
-      () => 0,
-      (err: { code?: number; stdout?: string }) => err.code ?? -1
-    );
-    expect(exit).toBe(1);
+    const exitCode = await main([
+      'verify',
+      '--challenge',
+      'calculator',
+      '--target',
+      `${app.url}/calc-broken`,
+      '--seed',
+      '6',
+      '--out',
+      outDir
+    ]);
+    expect(exitCode).toBe(1);
   }, 120_000);
 
   it('verify exits 2 on usage errors', async () => {
-    const exit = await execFileAsync('node', ['src/cli.ts', 'verify', '--challenge', 'nope', '--target', 'http://x.test'], {
-      cwd: ROOT_DIR
-    }).then(
-      () => 0,
-      (err: { code?: number }) => err.code ?? -1
-    );
-    expect(exit).toBe(2);
+    const exitCode = await main([
+      'verify',
+      '--challenge',
+      'nope',
+      '--target',
+      'http://x.test'
+    ]);
+    expect(exitCode).toBe(2);
   });
 });

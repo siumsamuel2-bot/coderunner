@@ -76,4 +76,12 @@ export type ChallengeId =
   | 'todo-auth'
   | 'pdf-analyzer'
   | 'landing-page'
-  | 'chatbot';
+  | 'chatbot'
+  | 'array-mastery'
+  | 'py-string-lab'
+  | 'py-json-forge'
+  | 'py-link-shortener'
+  | 'book-library-api'
+  | 'rust-fizzbuzz-api'
+  | 'rust-kv-store-api'
+  | 'rust-text-stats-api';

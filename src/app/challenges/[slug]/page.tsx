@@ -3,32 +3,26 @@ import { notFound } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
-import { Badge } from '@/components/ui/badge';
+import { capitalizeLabel } from '@/lib/format';
+import type { CheckManifest } from '@/lib/check-manifest';
+import { ACTIVE_RUN_STATUSES } from '@/lib/runs/lifecycle';
 
-import { SubmitRunForm } from './SubmitRunForm';
-import { ChallengeTimer } from './ChallengeTimer';
+import { AiBadge } from '@/components/challenges/AiBadge';
+import { CategoryChip } from '@/components/challenges/CategoryChip';
+import { CheckManifestList } from '@/components/challenges/CheckManifestList';
+import { DifficultyBadge } from '@/components/challenges/DifficultyBadge';
+import { RunPanel, type ActiveRunInfo } from '@/components/challenges/RunPanel';
+import { VerificationNotice } from '@/components/challenges/VerificationNotice';
 
 export const dynamic = 'force-dynamic';
 
-type JourneyStep = 'Entry' | 'Submit' | 'Verify' | 'Rank';
-
-type TestSpecCheck = {
-  id: string;
-  type: string;
-  [key: string]: unknown;
-};
-
-type TestSpec = {
-  checks?: TestSpecCheck[];
-};
-
-function parseRequirements(acceptanceCriteria: string): string[] {
-  return acceptanceCriteria
-    .split(/(?:\.|,|;)\s*/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
-
+/**
+ * Challenge detail page (SPE-132). Header with real metadata + attempt
+ * stats, "What you'll build", requirements checklist from the stored
+ * acceptance criteria, evaluation section from the real check manifest
+ * (dep D5) with the process-level notice as fallback, prominent Start
+ * CTA anchoring to the run form. No invented content (SPE-114 §10).
+ */
 export default async function ChallengeDetailPage({
   params,
 }: {
@@ -38,9 +32,6 @@ export default async function ChallengeDetailPage({
 
   const challenge = await prisma.challenge.findUnique({
     where: { slug },
-    include: {
-      _count: { select: { runs: true } },
-    },
   });
 
   if (!challenge) {
@@ -48,351 +39,168 @@ export default async function ChallengeDetailPage({
   }
 
   const session = await auth();
-  const userId = session?.user?.id ?? null;
 
-  let run: {
-    id: string;
-    status: string;
-    startedAt: Date | null;
-    endedAt: Date | null;
-    elapsedMs: number | null;
-    verification: { id: string; status: string; testOutput: string | null; verifiedAt: Date | null } | null;
-    verificationJobs: { id: string; attempts: number; maxAttempts: number }[];
-  } | null = null;
+  const [attemptCount, myAttemptCount] = await Promise.all([
+    prisma.run.count({ where: { challengeId: challenge.id } }),
+    session?.user?.id
+      ? prisma.run.count({
+          where: { challengeId: challenge.id, userId: session.user.id },
+        })
+      : Promise.resolve(0),
+  ]);
 
-  if (userId) {
-    run = await prisma.run.findFirst({
-      where: { userId, challengeId: challenge.id },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        verification: true,
-        verificationJobs: { orderBy: { createdAt: 'desc' }, take: 1 },
-      },
-    });
-  }
+  // RunPanel initial state (SPE-127 §1.2): a returning user with an active
+  // run lands straight in the active/resume view, never in the start form.
+  const activeRunRow = session?.user?.id
+    ? await prisma.run.findFirst({
+        where: {
+          userId: session.user.id,
+          challengeId: challenge.id,
+          status: { in: [...ACTIVE_RUN_STATUSES] },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    : null;
+  const activeRun: ActiveRunInfo | null = activeRunRow
+    ? {
+        runId: activeRunRow.id,
+        status: activeRunRow.status,
+        startedAt: activeRunRow.startedAt.toISOString(),
+        attempt: activeRunRow.attempt,
+      }
+    : null;
 
-  const job = run?.verificationJobs[0];
-  const attemptsRemaining =
-    job && job.maxAttempts != null
-      ? Math.max(0, job.maxAttempts - job.attempts)
-      : null;
+  // Requirements checklist: split the stored acceptance criteria into
+  // sentence-level items. Static prose, real data, no pass/fail implied.
+  const requirements = challenge.acceptanceCriteria
+    .split(/(?<=[.;])\s+(?=[A-Z(])/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-  let journeyActive: JourneyStep = 'Entry';
-  let journeyCompleted: JourneyStep[] = [];
-  if (run) {
-    if (run.status === 'verified') {
-      journeyActive = 'Rank';
-      journeyCompleted = ['Entry', 'Submit', 'Verify'];
-    } else if (run.status === 'verifying') {
-      journeyActive = 'Verify';
-      journeyCompleted = ['Entry', 'Submit'];
-    } else if (run.status === 'submitted') {
-      journeyActive = 'Submit';
-      journeyCompleted = ['Entry'];
-    } else if (run.status === 'failed') {
-      journeyActive = 'Verify';
-      journeyCompleted = ['Entry', 'Submit'];
-    } else {
-      journeyActive = 'Entry';
-    }
-  }
-
-  let deadline: string | null = null;
-  const inProgress =
-    !!run &&
-    !!run.startedAt &&
-    (run.status === 'submitted' || run.status === 'verifying') &&
-    !run.endedAt;
-
-  if (inProgress && run && run.startedAt && challenge.estimatedMinutes != null) {
-    deadline = new Date(
-      run.startedAt.getTime() + challenge.estimatedMinutes * 60 * 1000,
-    ).toISOString();
-  }
-
-  const testSpec: TestSpec | null = (challenge as unknown as { testSpec?: TestSpec }).testSpec ?? null;
-  const requirements = parseRequirements(challenge.acceptanceCriteria);
-
-  const steps: JourneyStep[] = ['Entry', 'Submit', 'Verify', 'Rank'];
+  const manifest =
+    (challenge.testSpec as { checkManifest?: CheckManifest } | null)
+      ?.checkManifest ?? null;
 
   return (
     <div className='min-h-screen bg-zinc-50 dark:bg-black py-12'>
-      <div className='max-w-4xl mx-auto px-4 sm:px-6 lg:px-8'>
-        {/* Header */}
-        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10'>
-          <Link
-            href='/challenges'
-            className='inline-flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors'
-          >
-            <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M10 19l-7-7m0 0l7-7m-7 7h18' />
-            </svg>
-            <span>Back to challenges</span>
-          </Link>
-          <div className='flex items-center gap-3 flex-wrap'>
-            <Badge variant='difficulty' value={challenge.difficulty} />
-            <Badge variant='category' value={challenge.category} />
-            <Badge variant='language' value={challenge.language} />
-            <Badge variant='time' value={`${challenge.estimatedMinutes} min`} />
-            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${challenge.aiAllowed ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 text-indigo-600 dark:text-indigo-400' : 'bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${challenge.aiAllowed ? 'bg-indigo-600' : 'bg-gray-400'}`}></span>
-              {challenge.aiAllowed ? 'AI allowed' : 'No AI'}
-            </span>
+      <div className='mx-auto max-w-4xl px-4 sm:px-6 lg:px-8'>
+        <Link
+          href='/challenges'
+          className='mb-6 inline-flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-500 dark:hover:text-gray-300'
+        >
+          <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M10 19l-7-7m0 0l7-7m-7 7h18' />
+          </svg>
+          <span>Back to challenges</span>
+        </Link>
+
+        {/* Challenge header */}
+        <header className='mb-8'>
+          <div className='mb-3 flex flex-wrap items-center gap-2'>
+            <CategoryChip category={challenge.category} />
+            <AiBadge aiAllowed={challenge.aiAllowed} />
           </div>
-        </div>
+          <h1 className='mb-4 text-3xl font-bold text-gray-900 dark:text-gray-100'>
+            {challenge.title}
+          </h1>
+          <div className='flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-400'>
+            <DifficultyBadge difficulty={challenge.difficulty} />
+            <span className='inline-flex items-center gap-1'>
+              <svg aria-hidden='true' className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' />
+              </svg>
+              {capitalizeLabel(challenge.language)}
+            </span>
+            <span className='inline-flex items-center gap-1'>
+              <svg aria-hidden='true' className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M12 8v4l3 3' />
+              </svg>
+              ~{challenge.estimatedMinutes} min estimate
+            </span>
+            {attemptCount > 0 && <span>{attemptCount} attempts so far</span>}
+            {myAttemptCount > 0 && (
+              <span>
+                You: {myAttemptCount}{' '}
+                {myAttemptCount === 1 ? 'attempt' : 'attempts'}
+              </span>
+            )}
+          </div>
+          <a
+            href='#start'
+            className='mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black'
+          >
+            Start challenge
+            <svg aria-hidden='true' className='h-4 w-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M19 14l-7 7m0 0l-7-7m7 7V3' />
+            </svg>
+          </a>
+        </header>
 
-        <h1 className='mb-2 text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight'>
-          {challenge.title}
-        </h1>
-        <p className='mb-6 text-sm text-indigo-600 dark:text-indigo-400 font-medium'>
-          Build with AI. Ship it. Get verified. Beat the clock.
-        </p>
-
-        {/* What you\'ll build */}
-        <section className='mb-10'>
-          <h2 className='mb-3 text-xl font-semibold text-gray-900 dark:text-gray-100'>
-            What you&#39;ll build
+        {/* What you'll build */}
+        <section className='mb-8 rounded-xl bg-white shadow-sm p-6 dark:bg-gray-800'>
+          <h2 className='mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100'>
+            {"What you'll build"}
           </h2>
-          <p className='text-lg text-gray-600 dark:text-gray-400 leading-relaxed'>
+          <p className='text-gray-700 dark:text-gray-300'>
             {challenge.description}
           </p>
         </section>
 
-        <div className='bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden'>
-          {/* Challenge info card */}
-          <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
-            <div className='grid gap-6 sm:grid-cols-2 lg:grid-cols-4'>
-              <div>
-                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
-                  Difficulty
-                </p>
-                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-                  {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
-                </p>
-              </div>
-              <div>
-                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
-                  Category
-                </p>
-                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-                  {challenge.category}
-                </p>
-              </div>
-              <div>
-                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
-                  Language
-                </p>
-                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-                  {challenge.language}
-                </p>
-              </div>
-              <div>
-                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
-                  Time Limit
-                </p>
-                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-                  {challenge.estimatedMinutes} minutes
-                </p>
-              </div>
-              <div>
-                <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1'>
-                  Total Attempts
-                </p>
-                <p className='text-base font-semibold text-gray-900 dark:text-gray-100'>
-                  {challenge._count.runs}
-                </p>
-              </div>
+        {/* Requirements */}
+        <section className='mb-8 rounded-xl bg-white shadow-sm p-6 dark:bg-gray-800'>
+          <h2 className='mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100'>
+            Requirements
+          </h2>
+          <ul className='space-y-2'>
+            {requirements.map((requirement, index) => (
+              <li
+                key={index}
+                className='flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300'
+              >
+                <svg
+                  aria-hidden='true'
+                  className='mt-0.5 h-4 w-4 flex-shrink-0 text-gray-400 dark:text-gray-500'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth='2'
+                    d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'
+                  />
+                </svg>
+                {requirement}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Evaluation */}
+        <section className='mb-8 rounded-xl bg-white shadow-sm p-6 dark:bg-gray-800'>
+          <h2 className='mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100'>
+            {"How you'll be verified"}
+          </h2>
+          {manifest && manifest.checks.length > 0 ? (
+            <div className='mb-4'>
+              <CheckManifestList manifest={manifest} />
             </div>
-          </div>
+          ) : null}
+          <VerificationNotice />
+        </section>
 
-          {/* Requirements checklist */}
-          <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
-            <div className='flex items-center justify-between mb-4'>
-              <h2 className='text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider'>
-                Requirements
-              </h2>
-              <span className='text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded'>
-                {requirements.length} criteria
-              </span>
-            </div>
-            <ul className='space-y-3'>
-              {requirements.map((req, i) => (
-                <li key={i} className='flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
-                  <span className='mt-0.5 shrink-0 text-gray-400 dark:text-gray-500'>
-                    ❐
-                  </span>
-                  <span>{req}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Examples */}
-          {testSpec?.checks?.length && (
-            <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
-              <h2 className='mb-4 text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider'>
-                Examples
-              </h2>
-              <p className='mb-3 text-sm text-gray-600 dark:text-gray-400'>
-                Automated test cases your solution will be checked against:
-              </p>
-              <ul className='space-y-2 text-sm'>
-                {testSpec.checks.map((check) => (
-                  <li key={check.id} className='flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700/50'>
-                    <span className='mt-0.5 shrink-0 text-xs font-mono font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded'>
-                      {check.id}
-                    </span>
-                    <span className='text-gray-700 dark:text-gray-300 leading-relaxed'>
-                      {check.type.charAt(0).toUpperCase() + check.type.slice(1)} test
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Evaluation */}
-          <div className='p-6 border-b border-gray-200 dark:border-gray-700'>
-            <h2 className='mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider'>
-              Evaluation
-            </h2>
-            <p className='text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-3'>
-              Your submission is verified automatically against the test cases below.
-              A run is marked <strong className='text-gray-900 dark:text-gray-100'>verified</strong> only when all checks pass.
-            </p>
-            <ul className='space-y-2 text-sm text-gray-700 dark:text-gray-300 leading-relaxed'>
-              {testSpec?.checks?.map((check) => (
-                <li key={check.id} className='flex items-start gap-3'>
-                  <span className='mt-0.5 shrink-0 text-gray-400 dark:text-gray-500'>
-                    ✓
-                  </span>
-                  <span>
-                    {check.type.charAt(0).toUpperCase() + check.type.slice(1)} test
-                    {check.id && ` — ${check.id}`}
-                  </span>
-                </li>
-              ))}
-              {(!testSpec?.checks?.length) && (
-                <li className='flex items-start gap-3'>
-                  <span className='mt-0.5 shrink-0 text-gray-400 dark:text-gray-500'>
-                    —
-                  </span>
-                  <span>No automated test cases defined for this challenge.</span>
-                </li>
-              )}
-            </ul>
-          </div>
-
-          {/* Journey indicator */}
-          <div className='p-6 border-t border-gray-200 dark:border-gray-700'>
-            <div className='flex items-center gap-4 mb-4'>
-              <p className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider shrink-0'>
-                Journey
-              </p>
-              <div className='flex-1 flex items-center gap-2'>
-                {steps.map((step, i) => {
-                  const completed = journeyCompleted.includes(step);
-                  const active = journeyActive === step;
-                  return (
-                    <div key={step} className='flex items-center gap-2'>
-                      {i > 0 && (
-                        <div className='w-px h-2 bg-gray-200 dark:bg-gray-700 shrink-0' />
-                      )}
-                      <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
-                          completed
-                            ? 'bg-green-600 text-white'
-                            : active
-                              ? 'bg-indigo-600 text-white ring-2 ring-indigo-600/20'
-                              : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                        }`}
-                      >
-                        {completed ? '✓' : String(i + 1)}
-                      </div>
-                      <span className={`text-xs font-medium ${
-                        completed
-                          ? 'text-green-600 dark:text-green-400'
-                          : active
-                            ? 'text-indigo-600 dark:text-indigo-400'
-                            : 'text-gray-400 dark:text-gray-500'
-                      }`}>
-                        {step}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Timer / attempts / persist note */}
-            {run && inProgress && deadline && (
-              <div className='mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-                <ChallengeTimer deadline={deadline} />
-                {attemptsRemaining != null && (
-                  <span className='text-sm font-medium text-gray-600 dark:text-gray-400'>
-                    Attempt{' '}
-                    {job ? job.attempts : 0} of {job ? job.maxAttempts : 0}{' '}
-                    ({attemptsRemaining} remaining)
-                  </span>
-                )}
-              </div>
-            )}
-            {run && inProgress && deadline && (
-              <p className='mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed'>
-                Timer starts when you submit. Deployment time doesn&apos;t count toward your
-                result. You can leave and come back later &mdash; progress is saved server-side.
-              </p>
-            )}
-          </div>
-
-          {/* Error state */}
-          {run?.status === 'failed' && run.verification && (
-            <div className='p-6 border-t border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'>
-              <p className='text-sm font-medium text-red-600 dark:text-red-400 mb-1'>
-                Verification failed
-              </p>
-              <p className='text-sm text-gray-700 dark:text-gray-300 mb-3'>
-                {run.verification.testOutput || 'No specific reason was returned. Try resubmitting your solution.'}
-              </p>
-              <p className='text-xs text-gray-500 dark:text-gray-400'>
-                Edit your solution and resubmit using the form below.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Empty state */}
-        {!run && (
-          <div className='mt-10 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-10 text-center'>
-            <svg className='mx-auto mb-6 h-12 w-12 text-gray-400 dark:text-gray-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.5' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' />
-            </svg>
-            <h2 className='mb-2 text-xl font-semibold text-gray-900 dark:text-gray-100'>
-              You haven&apos;t started this challenge yet.
-            </h2>
-            <p className='mb-8 text-gray-600 dark:text-gray-400 text-sm leading-relaxed max-w-sm mx-auto'>
-              Start your solution to begin the timer. Your run is saved
-              server-side, so you can leave and come back later.
-            </p>
-            <Link
-              href='#submit-run'
-              className='inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-solid border-indigo-600 px-6 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 transition-colors'
-            >
-              Start Challenge
-              <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M13 7l5 5m0 0l-5 5m5-5H6' />
-              </svg>
-            </Link>
-          </div>
-        )}
-
-        {/* Submission form */}
-        <div id='submit-run' className='mt-10'>
-          <SubmitRunForm
+        {/* Run panel (states A-E, SPE-133) */}
+        <section id='start' className='scroll-mt-6'>
+          <RunPanel
             challengeId={challenge.id}
-            userId={userId}
+            slug={challenge.slug}
+            challengeTitle={challenge.title}
+            signedIn={Boolean(session?.user?.id)}
+            aiAllowed={challenge.aiAllowed}
+            activeRun={activeRun}
           />
-        </div>
+        </section>
       </div>
     </div>
   );

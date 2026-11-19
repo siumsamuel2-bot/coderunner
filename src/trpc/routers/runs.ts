@@ -1,112 +1,36 @@
 ﻿import { z } from 'zod';
 
 import { router, procedure } from '../_trpc';
+import { dedupeBestPerUser } from '@/lib/leaderboard';
 
+// SPE-144 audit: `create` (unauthenticated, client-supplied userId — identity
+// forgery), `listByUser` and `listByChallenge` (dead code leaking
+// promptChain/toolLog) were removed. Run creation goes through the
+// session-authenticated REST route (/api/runs/start) only.
 export const runsRouter = router({
-  create: procedure
-    .input(
-      z.object({
-        userId: z.string(),
-        challengeId: z.string(),
-        elapsedMs: z.number().optional(),
-        promptChain: z.unknown().optional(),
-        toolLog: z.unknown().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.run.create({
-        data: {
-          userId: input.userId,
-          challengeId: input.challengeId,
-          elapsedMs: input.elapsedMs ?? null,
-          promptChain: input.promptChain as object | undefined,
-          toolLog: input.toolLog as object | undefined,
-        },
-      });
-    }),
-  listByUser: procedure
-    .input(z.object({ userId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.prisma.run.findMany({
-        where: { userId: input.userId },
-        orderBy: { createdAt: 'desc' },
-      });
-    }),
-  listByChallenge: procedure
-    .input(z.object({ challengeId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.prisma.run.findMany({
-        where: { challengeId: input.challengeId },
-        orderBy: { score: 'desc', elapsedMs: 'asc' },
-      });
-    }),
   getLeaderboard: procedure
-    .input(
-      z
-        .object({
-          challengeId: z.string().optional(),
-          period: z.enum(['all', 'day', 'week', 'month']).optional(),
-        })
-        .optional()
-    )
+    .input(z.object({ challengeId: z.string().optional() }).optional())
     .query(async ({ ctx, input }) => {
-      const period = input?.period ?? 'all';
-      const now = new Date();
-      let periodFilter: Date | undefined;
-      if (period === 'day') {
-        periodFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      } else if (period === 'week') {
-        periodFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      } else if (period === 'month') {
-        periodFilter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      }
-
-      return ctx.prisma.run.findMany({
+      // Verified runs only. Best-per-user dedup (SPE-135 dep D2, SPE-127
+      // §2.5): one rank per player — a user's slower runs never crowd the
+      // board. Catalog volume is small (one row per verified submission),
+      // so we fetch all and dedupe in JS (src/lib/leaderboard.ts).
+      const runs = await ctx.prisma.run.findMany({
         where: {
           status: 'verified',
-          score: { not: null },
-          ...(periodFilter ? { createdAt: { gte: periodFilter } } : {}),
+          elapsedMs: { not: null },
           ...(input?.challengeId ? { challengeId: input.challengeId } : {}),
         },
         include: {
           user: {
-            select: { id: true, name: true, image: true, username: true },
+            select: { id: true, name: true, image: true },
           },
-          challenge: true,
-          verification: true,
-          speedrun: true,
-        },
-        orderBy: [{ score: 'desc' }, { elapsedMs: 'asc' }],
-        take: 50,
-      });
-    }),
-  getWorldRecords: procedure
-    .input(z.object({ challengeId: z.string().optional() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.prisma.worldRecord.findMany({
-        where: {
-          ...(input?.challengeId ? { challengeId: input.challengeId } : {}),
-        },
-        include: {
-          user: {
-            select: { id: true, name: true, image: true, username: true },
+          challenge: {
+            select: { id: true, slug: true, title: true, difficulty: true },
           },
-          challenge: true,
         },
-        orderBy: [{ score: 'desc' }],
-        take: 50,
+        orderBy: { elapsedMs: 'asc' },
       });
-    }),
-  getPersonalRecords: procedure
-    .input(z.object({ userId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.prisma.personalRecord.findMany({
-        where: { userId: input.userId },
-        include: {
-          challenge: true,
-        },
-        orderBy: [{ bestScore: 'desc' }],
-        take: 50,
-      });
+      return dedupeBestPerUser(runs);
     }),
 });

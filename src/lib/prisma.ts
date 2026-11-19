@@ -3,10 +3,9 @@ import { PrismaClient } from "@/generated/prisma/client";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Errors worth retrying: transient connection failures from the Railway
-// free-tier Postgres sleeping on idle (P1001/P1002 = can't reach/timed out,
-// ECONNREFUSED/ECONNRESET/ETIMEDOUT = socket-level failures from dropped
-// idle connections in the pool).
+// Errors worth retrying: transient connection failures from Neon (P1001/P1002 =
+// can't reach/timed out, ECONNREFUSED/ECONNRESET/ETIMEDOUT = socket-level
+// failures from dropped idle connections in the pool).
 const RETRYABLE_CODES = new Set(["P1001", "P1002", "P1017"]);
 const RETRYABLE_MESSAGES = ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "Connection terminated"];
 const MAX_ATTEMPTS = 5;
@@ -42,8 +41,8 @@ function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
   const adapter = new PrismaLibSql({ url: connectionString });
   const client = new PrismaClient({ adapter });
-  // Retry transient connection errors so a sleeping/waking Postgres yields a
-  // slow response instead of a 500.
+  // Retry transient connection errors so a sleeping/waking Neon yields a slow
+  // response instead of a 500.
   return client.$extends({
     query: {
       $allModels: {

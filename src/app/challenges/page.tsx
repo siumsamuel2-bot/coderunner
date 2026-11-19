@@ -1,80 +1,76 @@
-import { prisma } from '@/lib/prisma';
+import Link from 'next/link';
 
-import { ChallengesList } from './ChallengesList';
+import { prisma } from '@/lib/prisma';
+import type { ChallengeListItem } from '@/lib/challenge-filters';
+
+import { ChallengeBrowser } from '@/components/challenges/ChallengeFilters';
 
 export const dynamic = 'force-dynamic';
 
-type ChallengeWithStats = {
-  slug: string;
-  title: string;
-  description: string;
-  difficulty: string;
-  estimatedMinutes: number;
-  category: string;
-  language: string;
-  aiAllowed: boolean;
-  attemptCount: number;
-  fastestTimeMs: number | null;
-};
-
+/**
+ * Challenges listing (SPE-131). Server component fetches the catalog plus
+ * real per-challenge stats (attempt count, fastest verified completion)
+ * computed from the runs table; the client component handles filtering.
+ * Only backend-backed metrics are rendered — nothing is invented.
+ */
 export default async function ChallengesPage() {
-  const challengesRaw = await prisma.challenge.findMany({
-    orderBy: { title: 'asc' },
-    include: {
-      _count: { select: { runs: true } },
-      runs: {
-        where: { status: 'verified', elapsedMs: { not: null } },
-        orderBy: { elapsedMs: 'asc' },
-        take: 1,
-        select: { elapsedMs: true },
-      },
-    },
-  });
+  const [challenges, runs] = await Promise.all([
+    prisma.challenge.findMany(),
+    prisma.run.findMany({
+      select: { challengeId: true, status: true, elapsedMs: true },
+    }),
+  ]);
 
-  const challenges: ChallengeWithStats[] = challengesRaw.map((c) => ({
-    slug: c.slug,
-    title: c.title,
-    description: c.description,
-    difficulty: c.difficulty,
-    estimatedMinutes: c.estimatedMinutes,
-    category: c.category,
-    language: c.language,
-    aiAllowed: c.aiAllowed,
-    attemptCount: c._count.runs,
-    fastestTimeMs: c.runs[0]?.elapsedMs ?? null,
+  const attemptCounts = new Map<string, number>();
+  const fastestVerified = new Map<string, number>();
+  for (const run of runs) {
+    attemptCounts.set(run.challengeId, (attemptCounts.get(run.challengeId) ?? 0) + 1);
+    if (run.status === 'verified' && run.elapsedMs !== null) {
+      const current = fastestVerified.get(run.challengeId);
+      if (current === undefined || run.elapsedMs < current) {
+        fastestVerified.set(run.challengeId, run.elapsedMs);
+      }
+    }
+  }
+
+  const items: ChallengeListItem[] = challenges.map((challenge) => ({
+    id: challenge.id,
+    slug: challenge.slug,
+    title: challenge.title,
+    description: challenge.description,
+    difficulty: challenge.difficulty,
+    language: challenge.language,
+    category: challenge.category,
+    aiAllowed: challenge.aiAllowed,
+    estimatedMinutes: challenge.estimatedMinutes,
+    attemptCount: attemptCounts.get(challenge.id) ?? 0,
+    fastestVerifiedMs: fastestVerified.get(challenge.id) ?? null,
   }));
 
   return (
     <div className='min-h-screen bg-zinc-50 dark:bg-black py-12'>
-      <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <h1 className='mb-8 text-3xl font-bold text-center text-gray-900 dark:text-gray-100'>
+      <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
+        <h1 className='mb-4 text-3xl font-bold text-center text-gray-900 dark:text-gray-100'>
           Coderunner Challenges
         </h1>
-        <p className='mb-6 text-center text-gray-600 dark:text-gray-400 max-w-2xl mx-auto'>
-          Build apps with AI and race against the clock on verified leaderboards
-        </p>
-        <p className='mb-12 text-center text-sm text-indigo-600 dark:text-indigo-400 font-medium max-w-2xl mx-auto'>
-          Use ChatGPT, Claude, Cursor, Copilot&mdash;or nothing. Your result is what matters.
+        <p className='mb-8 text-center text-gray-600 dark:text-gray-400 max-w-2xl mx-auto'>
+          Build apps with AI and race against the clock on verified leaderboards.
+          Use ChatGPT, Claude, Cursor, Copilot — or nothing. Your result is what
+          matters.
         </p>
 
-        {challenges.length > 0 ? (
-          <ChallengesList challenges={challenges} />
-        ) : (
-          <div className='col-span-full text-center py-16'>
-            <svg className='mx-auto mb-4 h-10 w-10 text-gray-400 dark:text-gray-600' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.5' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' />
-            </svg>
-            <p className='text-gray-500 dark:text-gray-400 text-lg mb-4'>
-              No challenges available yet
-            </p>
-            <a
-              href='/leaderboard'
-              className='inline-flex h-11 w-auto items-center justify-center gap-2 rounded-full border border-solid border-indigo-600 px-5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2'
-            >
-              View Leaderboard
-            </a>
-          </div>
-        )}
+        <ChallengeBrowser challenges={items} />
+
+        <p className='mt-12 text-center text-gray-600 dark:text-gray-400'>
+          Missing a category or found a bug?{' '}
+          <Link
+            href='/feedback'
+            className='text-indigo-600 dark:text-indigo-400 hover:underline'
+          >
+            Tell us
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );

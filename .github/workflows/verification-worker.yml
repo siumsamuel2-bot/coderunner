@@ -1,0 +1,27 @@
+
+name: Verification Worker
+
+on:
+  schedule:
+    # Run every 5 minutes to drain pending verification jobs
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Run verification worker (drain pending jobs)
+        run: npx tsx scripts/verification-worker.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        # The worker runs in a loop; the job timeout (55 min) bounds each run.

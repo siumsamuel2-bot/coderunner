@@ -1,8 +1,8 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 import { prisma } from '@/lib/prisma';
-import { auth, signOut } from '@/auth';
+import { SignOutLink } from '@/components/SignOutLink';
+import { requireAdmin } from '@/lib/admin';
 import { revalidatePath } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
@@ -10,15 +10,6 @@ export const dynamic = 'force-dynamic';
 const inputClasses =
   'block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm px-3 py-2 placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200';
 void inputClasses;
-
-async function requireAdmin() {
-  const session = await auth();
-  const isAdmin = session?.user?.email === 'admin@example.com';
-  if (!session?.user?.id || !isAdmin) {
-    redirect('/auth/signin');
-  }
-  return session as { user: { id: string; email?: string | null; name?: string | null; image?: string | null } };
-}
 
 export default async function AdminPage() {
   const session = await requireAdmin();
@@ -86,19 +77,7 @@ export default async function AdminPage() {
                 {session.user.email}
               </p>
             </div>
-            <form
-              action={async () => {
-                'use server';
-                await signOut({ redirectTo: '/' });
-              }}
-            >
-              <button
-                type='submit'
-                className='px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg'
-              >
-                Sign Out
-              </button>
-            </form>
+            <SignOutLink />
           </div>
         </div>
 

@@ -1,6 +1,18 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  // workerd: emits a static .wasm import (wasm-worker-loader) instead of
+  // base64-decoding + new WebAssembly.Module(), which Cloudflare Workers
+  // rejects ("Wasm code generation disallowed by embedder").
+  runtime = "workerd"
+}
+
+// Second generation for Node hosts (seed, db-check, verification worker on
+// GitHub Actions): the workerd runtime's `?module` wasm import does not
+// resolve under plain Node/tsx, so Node consumers import this client instead.
+generator clientNode {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma-node"
 }
 
 datasource db {
@@ -9,6 +21,7 @@ datasource db {
 
 model User {
   id            String    @id @default(cuid())
+  clerkId       String?   @unique
   name          String?
   username      String?   @unique
   email         String?   @unique
@@ -17,50 +30,10 @@ model User {
   clerkId       String?   @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  accounts      Account[]
-  sessions      Session[]
   runs          Run[]
   speedruns     Speedrun[]
   worldRecords  WorldRecord[]
   personalRecords PersonalRecord[]
-}
-
-model Account {
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([provider, providerAccountId])
-}
-
-model Session {
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([sessionToken])
-}
-
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
-
-  @@id([identifier, token])
 }
 
 model Challenge {
@@ -69,6 +42,15 @@ model Challenge {
   title              String
   description        String
   difficulty         String
+  language           String   @default("typescript")
+  // SPE-131/SPE-126: listing metadata. category is a free-form short label
+  // (algorithms, frontend, backend, full-stack, ai, data, general); the UI
+  // reads distinct values from the DB. aiAllowed=true means AI coding
+  // assistants are permitted during the run (true for all challenges today).
+  // NOTE: no timeLimitMinutes yet — nothing enforces a hard cutoff, so the
+  // UI must present estimatedMinutes as an estimate, never a limit.
+  category           String   @default("general")
+  aiAllowed          Boolean  @default(true)
   estimatedMinutes   Int
   category           String   @default("General")
   language           String   @default("JavaScript")
@@ -175,8 +157,19 @@ model Verification {
   runId      String   @unique
   status     String
   testOutput String?
+  reportData Json?
   verifiedAt DateTime @default(now())
   run        Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  category  String   @default("general")
+  message   String
+  email     String?
+  page      String?
+  status    String   @default("new")
+  createdAt DateTime @default(now())
 }
 
 model VerificationJob {

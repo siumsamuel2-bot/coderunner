@@ -5,6 +5,14 @@ import { todoAuthVerifier } from './challenges/todo-auth/verifier.ts';
 import { pdfAnalyzerVerifier } from './challenges/pdf-analyzer/verifier.ts';
 import { landingPageVerifier } from './challenges/landing-page/verifier.ts';
 import { chatbotVerifier } from './challenges/chatbot/verifier.ts';
+import { arrayMasteryVerifier } from './challenges/array-mastery/verifier.ts';
+import { pyStringLabVerifier } from './challenges/py-string-lab/verifier.ts';
+import { pyJsonForgeVerifier } from './challenges/py-json-forge/verifier.ts';
+import { pyLinkShortenerVerifier } from './challenges/py-link-shortener/verifier.ts';
+import { bookLibraryApiVerifier } from './challenges/book-library-api/verifier.ts';
+import { rustKvStoreApiVerifier } from './challenges/rust-kv-store-api/verifier.ts';
+import { rustFizzbuzzApiVerifier } from './challenges/rust-fizzbuzz-api/verifier.ts';
+import { rustTextStatsApiVerifier } from './challenges/rust-text-stats-api/verifier.ts';
 
 /** All built-in challenge verifiers, keyed by challenge id. */
 export const CHALLENGES: Readonly<Record<ChallengeId, ChallengeVerifier>> = {
@@ -12,7 +20,15 @@ export const CHALLENGES: Readonly<Record<ChallengeId, ChallengeVerifier>> = {
   'todo-auth': todoAuthVerifier,
   'pdf-analyzer': pdfAnalyzerVerifier,
   'landing-page': landingPageVerifier,
-  chatbot: chatbotVerifier
+  chatbot: chatbotVerifier,
+  'array-mastery': arrayMasteryVerifier,
+  'py-string-lab': pyStringLabVerifier,
+  'py-json-forge': pyJsonForgeVerifier,
+  'py-link-shortener': pyLinkShortenerVerifier,
+  'book-library-api': bookLibraryApiVerifier,
+  'rust-fizzbuzz-api': rustFizzbuzzApiVerifier,
+  'rust-kv-store-api': rustKvStoreApiVerifier,
+  'rust-text-stats-api': rustTextStatsApiVerifier
 };
 
 export const CHALLENGE_IDS = Object.keys(CHALLENGES) as ChallengeId[];

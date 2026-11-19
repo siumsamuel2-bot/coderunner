@@ -6,6 +6,8 @@ interface RunStatusUpdate {
   elapsedMs: number | null;
   endedAt: Date | null;
   updatedAt: Date;
+  failureReason: string | null;
+  verificationStatus: string | null;
 }
 
 /**
@@ -14,6 +16,7 @@ interface RunStatusUpdate {
 export function useVerificationUpdates(runId: string | null) {
   const [runStatus, setRunStatus] = useState<RunStatusUpdate | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [terminalSeen, setTerminalSeen] = useState(false);
 
   // Derived: we are "loading" while a run is tracked but no status/error yet.
   const loading = runId !== null && runStatus === null && error === null;
@@ -29,12 +32,23 @@ export function useVerificationUpdates(runId: string | null) {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'update' && data.run) {
+          const { status } = data.run;
+          const isTerminal = status === 'verified' || status === 'failed';
+
+          // Once a terminal state is seen, ignore non-terminal updates
+          // to prevent flipping back to 'Verifying...' after 'Failed'.
+          if (terminalSeen && !isTerminal) return;
+
+          if (isTerminal) setTerminalSeen(true);
+
           setRunStatus({
             id: data.run.id,
             status: data.run.status,
             elapsedMs: data.run.elapsedMs ?? null,
             endedAt: data.run.endedAt ? new Date(data.run.endedAt) : null,
             updatedAt: new Date(data.run.updatedAt),
+            failureReason: data.run.failureReason ?? null,
+            verificationStatus: data.run.verificationStatus ?? null,
           });
         }
         if (data.type === 'error') {
@@ -52,7 +66,7 @@ export function useVerificationUpdates(runId: string | null) {
     };
 
     return () => eventSource.close();
-  }, [runId]);
+  }, [runId, terminalSeen]);
 
   return { runStatus, loading, error };
 }
