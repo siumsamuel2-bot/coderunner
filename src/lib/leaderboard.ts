@@ -10,6 +10,7 @@ export interface LeaderboardRun {
   userId: string;
   challengeId: string;
   elapsedMs: number | null;
+  score: number | null;
   endedAt: Date | null;
   user: { id: string; name: string | null; image: string | null };
   challenge: {

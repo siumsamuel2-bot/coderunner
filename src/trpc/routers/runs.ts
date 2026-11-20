@@ -38,7 +38,13 @@ export const runsRouter = router({
           ...(periodFilter ? { endedAt: { gte: periodFilter } } : {}),
           ...(input?.challengeId ? { challengeId: input.challengeId } : {}),
         },
-        include: {
+        select: {
+          id: true,
+          userId: true,
+          challengeId: true,
+          elapsedMs: true,
+          score: true,
+          endedAt: true,
           user: {
             select: { id: true, name: true, image: true },
           },

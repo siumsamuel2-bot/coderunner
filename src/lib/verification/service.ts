@@ -60,6 +60,11 @@ export async function processVerificationResults(
       evidence: c.evidence,
     }));
 
+    // Compute score: 1000 - elapsed seconds, floored at 0 (SPE-114 Phase 1).
+    // elapsedMs is computed server-side at submit (now - startedAt).
+    const elapsedSeconds = Math.floor((report.durationMs ?? 0) / 1000);
+    const score = Math.max(0, 1000 - elapsedSeconds);
+
     // Update the run with verification results
     // elapsedMs is computed server-side at submit (now - startedAt) and must
     // not be overwritten by the harness Playwright runtime (SPE-119).
@@ -68,6 +73,7 @@ export async function processVerificationResults(
       data: {
         status: passed ? 'verified' : 'failed',
         endedAt: new Date(report.finishedAt),
+        score: passed ? score : null,
         ...(run.elapsedMs == null ? { elapsedMs: report.durationMs ?? null } : {}),
       },
     });

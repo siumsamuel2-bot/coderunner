@@ -60,6 +60,15 @@ function RecordBadge() {
   );
 }
 
+function ScoreCell({ score }: { score: number | null }) {
+  if (score === null) return <span className='text-gray-400'>—</span>;
+  return (
+    <span className='text-sm font-medium text-gray-900 dark:text-gray-100' style={{ fontVariantNumeric: 'tabular-nums' }}>
+      {score}
+    </span>
+  );
+}
+
 function SubmittedCell({ endedAt }: { endedAt: Date | null }) {
   if (!endedAt) return <span>—</span>;
   const date = new Date(endedAt);
@@ -303,6 +312,12 @@ export default async function LeaderboardPage({
                           scope='col'
                           className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'
                         >
+                          Score
+                        </th>
+                        <th
+                          scope='col'
+                          className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'
+                        >
                           Submitted
                         </th>
                       </tr>
@@ -386,6 +401,9 @@ export default async function LeaderboardPage({
                               {run.elapsedMs !== null
                                 ? formatDuration(run.elapsedMs)
                                 : '—'}
+                            </td>
+                            <td className='px-6 py-4 whitespace-nowrap'>
+                              <ScoreCell score={run.score} />
                             </td>
                             <td className='px-6 py-4 whitespace-nowrap'>
                               <SubmittedCell endedAt={run.endedAt} />
