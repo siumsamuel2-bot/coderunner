@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { addVerificationJob } from '@/lib/verification/queue';
 import { auth } from '@/auth';
+import { clearStaleExecutionLocks } from '@/lib/execution-lock';
 
 /**
  * POST /api/runs
@@ -14,6 +15,13 @@ import { auth } from '@/auth';
  * sends timing — elapsedMs is provably from DB timestamps.
  */
 export async function POST(request: Request) {
+  // Clear stale executionRunId locks before processing (SPE-89).
+  try {
+    await clearStaleExecutionLocks();
+  } catch {
+    // Non-fatal: continue with the request.
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,5 +1,6 @@
 ﻿import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
+import { clearStaleExecutionLocks } from "@/lib/execution-lock";
 
 export interface Context {
   prisma: typeof prisma;
@@ -8,6 +9,14 @@ export interface Context {
 }
 
 export async function createContext(): Promise<Context> {
+  // Clear stale executionRunId locks before every tRPC request so that
+  // expired locks don't block run creation or submission (SPE-89).
+  try {
+    await clearStaleExecutionLocks();
+  } catch {
+    // Non-fatal: continue with the request even if the sweep fails.
+  }
+
   const { userId } = await auth();
   let isAdmin = false;
 

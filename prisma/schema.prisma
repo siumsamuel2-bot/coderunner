@@ -75,6 +75,11 @@ model Run {
   completionFactor   Float?
   timeFactor         Float?
   antiCheatMultiplier Float?
+  executionRunId             String?   // Stale executionRunId lock (SPE-89 platform fix)
+  executionRunStartedAt      DateTime? // When the executionRunId lock was taken
+  executionRunExpiresAt      DateTime? // When the executionRunId lock expires (timeout)
+  executionRunClearedAt      DateTime? // When the executionRunId lock was cleared
+  executionRunClearedBy      String?   // Who cleared the executionRunId lock
   submittedAt        DateTime  @default(now())
   verifiedAt         DateTime?
   promptChain        Json?

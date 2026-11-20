@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { ACTIVE_RUN_STATUSES, nextAttemptNumber } from '@/lib/runs/lifecycle';
+import { clearStaleExecutionLocks } from '@/lib/execution-lock';
 
 /**
  * POST /api/runs/start
@@ -18,6 +19,13 @@ import { ACTIVE_RUN_STATUSES, nextAttemptNumber } from '@/lib/runs/lifecycle';
  * /api/runs/[runId]/abandon).
  */
 export async function POST(request: Request) {
+  // Clear stale executionRunId locks before processing (SPE-89).
+  try {
+    await clearStaleExecutionLocks();
+  } catch {
+    // Non-fatal: continue with the request.
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
