@@ -128,6 +128,7 @@ export default async function LeaderboardPage({
     elapsedMs: number;
     rank: number;
   } | null = null;
+  const userBestMsPerChallenge = new Map<string, number>();
   if (currentUserId) {
     const myVerifiedRuns = await prisma.run.findMany({
       where: {
@@ -141,6 +142,13 @@ export default async function LeaderboardPage({
         challenge: { select: { slug: true, title: true } },
       },
     });
+    for (const r of myVerifiedRuns) {
+      const elapsedMs = r.elapsedMs as number;
+      const current = userBestMsPerChallenge.get(r.challengeId);
+      if (!current || elapsedMs < current) {
+        userBestMsPerChallenge.set(r.challengeId, elapsedMs);
+      }
+    }
     const bestPerChallenge = new Map<
       string,
       { elapsedMs: number; slug: string; title: string }
@@ -401,6 +409,16 @@ export default async function LeaderboardPage({
                               {run.elapsedMs !== null
                                 ? formatDuration(run.elapsedMs)
                                 : '—'}
+                              {isMe &&
+                                userBestMsPerChallenge.get(
+                                  run.challengeId,
+                                ) === run.elapsedMs && (
+                                <span
+                                  className='ml-1 inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-900/20 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter'
+                                >
+                                  PB
+                                </span>
+                              )}
                             </td>
                             <td className='px-6 py-4 whitespace-nowrap'>
                               <ScoreCell score={run.score} />
