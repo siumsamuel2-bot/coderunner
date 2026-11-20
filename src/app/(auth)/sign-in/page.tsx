@@ -6,7 +6,11 @@ export const metadata: Metadata = {
   description: "Sign in to CodeRunner - Competitive programming for AI-native developers",
 };
 
-export default function SignInPage() {
+export default function SignInPage({
+  searchParams,
+}: {
+  searchParams?: { redirect_url?: string };
+}) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
       <SignIn
@@ -19,6 +23,7 @@ export default function SignInPage() {
         routing="path"
         path="/sign-in"
         signUpUrl="/sign-up"
+        redirectUrl={searchParams?.redirect_url ?? "/dashboard"}
       />
     </div>
   );
